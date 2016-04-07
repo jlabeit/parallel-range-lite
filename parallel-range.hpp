@@ -20,15 +20,16 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "parallel.hpp"
-#include "sequence.hpp"
-
-#include <iostream>
 #include <algorithm>
 #include <functional>
+#include <iostream>
+#include <vector>
 
 #include "blockRadixSort.hpp"
+#include "parallel.hpp"
+#include "sequence.hpp"
 #include "quicksort.hpp"
+
 
 using namespace std;
 
@@ -57,9 +58,8 @@ struct cmp_offset {
 	}
 };
 
-const int32_t BLOCK_SIZE = 128*1024;
 
-template <class saidx_t>
+template <class saidx_t, int32_t BLOCK_SIZE = 128*1024>
 struct segment_info {
 	// Text size.
 	saidx_t n;
@@ -67,8 +67,8 @@ struct segment_info {
 	saidx_t* ISA;
 	saidx_t num_blocks;
 	vector<bool> bitvector;
-	// Is set to fals if all suffixes are compared different.
-	volatile bool done;
+	vector<bool> write_bv;
+	vector<bool> odd_prefix_sum;
 
 	segment_info(saidx_t n_, saidx_t* SA_, saidx_t* ISA_) {
 		n = n_;
@@ -76,35 +76,100 @@ struct segment_info {
 		ISA = ISA_;
 		num_blocks = n / BLOCK_SIZE + 1;
 		bitvector.resize(n, false);
+		write_bv.resize(n, false);
 		bitvector[0] = true;
 		bitvector[n-1] = true;
-		done = false;
+		odd_prefix_sum.resize(num_blocks, true);
+		odd_prefix_sum[0] = false;
+	}
+
+
+	// Update precomputed structures to answere queries faster.
+	void update_structure() {
+		parallel_for(saidx_t b = 0; b < num_blocks; ++b) {
+			saidx_t pos = b * BLOCK_SIZE - 1; // Do not skip first.
+			saidx_t count = 0;
+			while (next_one_in_block(pos, b)) {
+				count++;
+			}
+			odd_prefix_sum[b] = count & 1;
+		}
+		bool sum = 0;
+		bool tmp = 0;
+		for (saidx_t b = 0; b < num_blocks; ++b) {
+			tmp = sum;
+			sum ^= odd_prefix_sum[b];			
+			odd_prefix_sum[b] = tmp; // exlusive.
+		}
+	}
+
+	inline bool next_one_in_block(saidx_t& pos, saidx_t block) const {
+		saidx_t end = std::min((block + 1) * BLOCK_SIZE, n);
+		++pos;
+		while (pos < end) {
+			if (bitvector[pos]) {
+				return true;
+			}
+			++pos;
+		}
+		return false;
 	}
 
 	// Find next set bit after pos in block or end in a following block.
 	// Return false if there is no following 1 bit or the the following 1
 	// bit is a start of a segment starting in a new block.
-	inline bool next_one(saidx_t& pos, saidx_t block) const {
-		// TODO implement.
+	inline bool next_one(saidx_t& pos) const {
+		saidx_t end = n; // TODO fast block skip implementation.
+		++pos;
+		while (pos < end) {
+			if (bitvector[pos]) {
+				return true;
+			}
+			++pos;
+		}
+		return false;
+	}
+
+	// Find previous set bit before pos in block or end in a following block.
+	inline void previous_one(saidx_t& pos) const {
+		// TODO fast block skip implementation.
+		while (!bitvector[--pos]) 
+			continue;
 	}
 
 	// Find first segement start in a block or return false if block is empty.
-	inline bool find_first_open(saidx_t& pos, saidx_t block) const {
-		// TODO implement.
+	// Note: Pos is only used for output.
+	inline bool find_first_open_in_block(saidx_t& pos, saidx_t block) const {
+		// TODO, maybe do faster precompute.
+		pos = block * BLOCK_SIZE - 1; // -1 to not skip first bit.
+		if (next_one_in_block(pos, block)) {
+			if (odd_prefix_sum[block]) {
+				return next_one_in_block(pos, block); // Skip end of segment.
+			} else {
+				return true;
+			}
+		}
+		return false;
 	}
 
+	inline bool not_done() {
+		saidx_t tmp = -1;
+		return next_one(tmp);
+	}
+
+	// Important: Segments are processed in parallel, even in same block.
 	// TODO skip empty blocks.
-	void iterate_segments(std::function<void(saidx_t, saidx_t)> predicate) const {
+	void iterate_segments(function<void(saidx_t, saidx_t)> predicate) const {
 		parallel_for(saidx_t b = 0; b < num_blocks; b++) {
 			saidx_t start_segment, end_segment;
-			if (find_first_open(start_segment, b)) {
+			if (find_first_open_in_block(start_segment, b)) {
 				end_segment = start_segment;
-				next_one(end_segment, b);
+				next_one(end_segment);
 				predicate(start_segment, end_segment);
 				start_segment = end_segment;
-				while (next_one(start_segment, b)) {
+				while (next_one_in_block(start_segment, b)) {
 					end_segment = start_segment;
-					next_one(end_segment, b);
+					next_one(end_segment);
 					predicate(start_segment, end_segment);
 				}
 			}
@@ -112,75 +177,118 @@ struct segment_info {
 	}
 
 	// Lambda arguments: start, end, global_start, global_end.
-	void iterate_blocked_segments(std::function<void(saidx_t, saidx_t, saidx_t, saidx_t)>
+	// Important: Parallel calls only between blocks not between segments
+	// of the same block.
+	void iterate_segments_blocked(std::function<void(saidx_t, saidx_t, saidx_t, saidx_t)>
 			predicate) const {
-		iterate_segments([&predicate](saidx_t start, saidx_t end) {
-				saidx_t bs = start / BLOCK_SIZE;
-				saidx_t be = end / BLOCK_SIZE;
-				parallel_for (saidx_t b = bs; b <= be; ++b) {
-					saidx_t s = std::max(b * BLOCK_SIZE, start);	
-					saidx_t e = std::min((b+1)* BLOCK_SIZE, end);
-					predicate(s, e, start, end);
-				}
-				});
+		parallel_for(saidx_t b = 0; b < num_blocks; b++) {
+			saidx_t start_segment, end_segment;
+			saidx_t start_block = b * BLOCK_SIZE;
+			saidx_t end_block = std::min((b+1)*BLOCK_SIZE, n) - 1;
+			if (odd_prefix_sum[b]) { // Close segment.
+				start_segment = start_block;
+				previous_one(start_segment);
+				end_segment = start_block-1;
+				next_one(end_segment);
+				predicate(start_block, std::min(end_block, end_segment),
+					       start_segment, end_segment);
+			} else {
+				end_segment = start_block-1;
+			}
+			while (end_segment <= end_block) {
+				start_segment = end_segment;	
+				if (!next_one_in_block(start_segment, b)) 
+					break;
+				end_segment = start_segment;				
+				next_one(end_segment);
+				predicate(start_segment, std::min(end_block, end_segment),
+					       start_segment, end_segment);
+
+			}	
+		}
 	}
 
 	// Update additional data structure used to navigate segments.
 	// TODO parallelize (use iterate_blocked_segments).
 	void update_segments(saidx_t offset) {
 		cmp_offset<saidx_t> F(ISA, n, offset);
-		iterate_segments([&F, this](saidx_t start, saidx_t end) {
+		iterate_segments_blocked([&F, this](saidx_t start, saidx_t end,
+					saidx_t start_segment, saidx_t end_segment) {
 			saidx_t old_f, cur_f, new_f; 
 			cur_f = F(SA[start]);
 			new_f = F(SA[start+1]);
 			// Beginning of segment.
-			if (start == 0) {
-				bitvector[start] = cur_f == new_f;			
-			} else {
+			if (start == start_segment) { // Actual start.
+				write_bv[start] = (cur_f == new_f);			
+			} else { 		      // Spans previous block.
 				old_f = F(SA[start-1]);
-				bitvector[start] = (old_f != cur_f) ^ (cur_f != new_f); 
+				write_bv[start] = (old_f == cur_f) ^ (cur_f == new_f); 
 			}
 			old_f = cur_f; cur_f = new_f;
 			// Inner part.
 			for (saidx_t i = start+1; i < end; i++) {
 				new_f = F(SA[i + 1]);
-				bitvector[start] = (old_f != cur_f) ^ (cur_f != new_f); 
+				write_bv[i] = (old_f == cur_f) ^ (cur_f == new_f); 
 				old_f = cur_f; cur_f = new_f;
 			}
 			// End of segment.
-			bitvector[end] = old_f == cur_f;
+			if (end == end_segment) { // Actual end.
+				write_bv[end] = (old_f == cur_f);
+			} else { 		  // Spans next block.
+				new_f = F(SA[end + 1]);
+				write_bv[end] = (old_f == cur_f) ^ (cur_f == new_f); 
+			}
+			});
+		update_names_1();
+		swap(write_bv, bitvector);
+		update_structure();
+		update_names_2();		
+	}
+
+	// Assign to all suffixes in the current segments their position as ISA value.
+	void update_names_1() {
+		// TODO: Test whats faster blocked or not blocked update.
+		iterate_segments([this](saidx_t start, saidx_t end) {
+				parallel_for (saidx_t i = start; i <= end; ++i) {
+					ISA[SA[i]] = i;
+				}
+			});
+	}
+	// Assign all suffixes in the current segments the same ISA value.
+	void update_names_2() {
+		// TODO: Test whats faster blocked or not blocked update.
+		iterate_segments([this](saidx_t start, saidx_t end) {
+				parallel_for (saidx_t i = start; i <= end; ++i) {
+					ISA[SA[i]] = start;
+				}
 			});
 	}
 
-	// Update 'names' (rank values in ISA). 
-	void update_names() {
+	void prefix_sort(saidx_t offset) {
+		cmp_offset<saidx_t> F(ISA, n, offset); 	
+		iterate_segments([F,offset, this](saidx_t start, saidx_t end) {
+				saidx_t l = end-start+1;
+				if (l >= 256)
+					intSort::iSort(SA + start, l, n , F);
+				else
+					quickSort(SA + start, l, F);
+
+				});
 	}
 };
 
 
-
-
-//	if (l >= 256) 
-//		intSort::iSort(SAi, l, n , cmp_offset<saidx_t>(SA, ISA, n, offset));
-//	else
-//		quickSort(SAi, l, cmp_offset<saidx_t>(SA, ISA, n, offset));
-
-
-
 template <class saidx_t>
 void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
-	
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
 	// make all comparisons
+	segs.prefix_sort(0); // Not necessary if already sorted by first character.
 	segs.update_segments(0);
 	saidx_t offset = 1;
-	while (!segs.done) {
-	 	parallel_for(saidx_t b = 0; b < segs.num_blocks; ++b) {	
-	 		sort_segs_in_block(b, segs);	
-		}
-		segs.update_segments();
-		segs.update_names();
+	while (segs.not_done()) {
+		segs.prefix_sort(offset);
+		segs.update_segments(offset);
 	 	offset *= 2;
 	}
 }
