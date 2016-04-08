@@ -1,9 +1,10 @@
 cmake_minimum_required (VERSION 2.6)
-project (Parallel-Ranke-Light)
-add_executable(Parallel-Ranke-Light main.cpp)
+project (Parallel-Range-Light)
+add_executable(Parallel-Range-Light main.cpp)
 
 #Compiler Flags.
-add_definitions(-g -Wall -std=c++11 -fcilkplus -lcilkplus -lcilkrts)
+target_link_libraries(Parallel-Range-Light divsufsort cilkrts)
+add_definitions(-g -Wall -std=c++11 -fcilkplus)
 #add_definitions(-Wall -std=c++11 -DCILKP -fcilkplus -lcilkplus -lcilkrts)
 
 # GTest

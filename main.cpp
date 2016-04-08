@@ -1,13 +1,16 @@
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <string>
+
+#include <divsufsort.h>
 
 #include "parallel-range.hpp"
 
 using namespace std;
 
 int main(int argc, char* args[]) {
-	if (argc != 3) {
+	if (argc != 2) {
 		cout << "Expected two arguments (input and output file)."
 			<< endl;	
 		return -1;
@@ -33,13 +36,24 @@ int main(int argc, char* args[]) {
 		}
 	}
 	cout << "Starting tr sort" << endl;
+	auto start = chrono::steady_clock::now();
 	paralleltrsort(ISA, SA, size);
+	auto end = chrono::steady_clock::now();
+	auto diff = end - start;
+	cout << "Parallel Range Light time: " <<
+		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
 	cout << "Done sorting..." << endl;
-	{
-		fstream output_file(args[2], ios::out);
-		for (int i = 0; i < size; ++i) {
-			output_file << SA[i] << endl;
-		}
+	// Time divsufsort.
+	start = chrono::steady_clock::now();
+	divsufsort((unsigned char*)text.data(), ISA, size);
+	end = chrono::steady_clock::now();
+	cout << "DivSufSort time: " <<
+		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
+	for (int i = 0; i < size; i++) {
+		if (ISA[i] != SA[i]) {
+			cout << "SA[i] = " << ISA[i] << " expected but was " << SA[i] << endl;
+			break;
+		}	
 	}
 	return 0;
 
