@@ -272,13 +272,10 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
 	// make all comparisons
-	cout << "starting prefix sort " << n << endl;
 	segs.prefix_sort(0); // Not necessary if already sorted by first character.
-	cout << "updating segments" << endl;
 	segs.update_segments(0);
 	saidx_t offset = 1;
 	while (segs.not_done()) {
-		cout << "offset: " << offset << endl;
 		segs.prefix_sort(offset);
 		segs.update_segments(offset);
 	 	offset *= 2;

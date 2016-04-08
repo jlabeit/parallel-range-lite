@@ -35,18 +35,17 @@ int main(int argc, char* args[]) {
 			ISA[i] = text[i];
 		}
 	}
-	cout << "Starting tr sort" << endl;
 	auto start = chrono::steady_clock::now();
 	paralleltrsort(ISA, SA, size);
 	auto end = chrono::steady_clock::now();
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
-	cout << "Done sorting..." << endl;
 	// Time divsufsort.
 	start = chrono::steady_clock::now();
 	divsufsort((unsigned char*)text.data(), ISA, size);
 	end = chrono::steady_clock::now();
+	diff = end - start;
 	cout << "DivSufSort time: " <<
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
 	for (int i = 0; i < size; i++) {
