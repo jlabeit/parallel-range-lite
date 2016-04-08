@@ -74,9 +74,9 @@ struct segment_info {
 		n = n_;
 		SA = SA_;
 		ISA = ISA_;
-		num_blocks = n / BLOCK_SIZE + 1;
+		num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
 		bitvector.resize(n, false);
-		write_bv.resize(n, false);
+		write_bv.resize(n);
 		bitvector[0] = true;
 		bitvector[n-1] = true;
 		odd_prefix_sum.resize(num_blocks, true);
@@ -171,6 +171,7 @@ struct segment_info {
 					end_segment = start_segment;
 					next_one(end_segment);
 					predicate(start_segment, end_segment);
+					start_segment = end_segment;
 				}
 			}
 		}
@@ -211,32 +212,20 @@ struct segment_info {
 	// Update additional data structure used to navigate segments.
 	// TODO parallelize (use iterate_blocked_segments).
 	void update_segments(saidx_t offset) {
+		parallel_for(saidx_t i = 0; i < n; i++) // TODO do this more efficient.
+			write_bv[i] = false;
 		cmp_offset<saidx_t> F(ISA, n, offset);
 		iterate_segments_blocked([&F, this](saidx_t start, saidx_t end,
 					saidx_t start_segment, saidx_t end_segment) {
 			saidx_t old_f, cur_f, new_f; 
-			cur_f = F(SA[start]);
-			new_f = F(SA[start+1]);
-			// Beginning of segment.
-			if (start == start_segment) { // Actual start.
-				write_bv[start] = (cur_f == new_f);			
-			} else { 		      // Spans previous block.
-				old_f = F(SA[start-1]);
-				write_bv[start] = (old_f == cur_f) ^ (cur_f == new_f); 
-			}
-			old_f = cur_f; cur_f = new_f;
-			// Inner part.
-			for (saidx_t i = start+1; i < end; i++) {
-				new_f = F(SA[i + 1]);
-				write_bv[i] = (old_f == cur_f) ^ (cur_f == new_f); 
+			// old_f and new_f can only compare as equal if they
+			// are in the segment bounds.
+			cur_f = start_segment < start ? F(SA[start-1]) : n;
+			new_f = F(SA[start]);
+			for (saidx_t i = start; i <= end; i++) {
 				old_f = cur_f; cur_f = new_f;
-			}
-			// End of segment.
-			if (end == end_segment) { // Actual end.
-				write_bv[end] = (old_f == cur_f);
-			} else { 		  // Spans next block.
-				new_f = F(SA[end + 1]);
-				write_bv[end] = (old_f == cur_f) ^ (cur_f == new_f); 
+				new_f = i < end_segment ? F(SA[i+1]) : n;
+				write_bv[i] = (old_f == cur_f) ^ (cur_f == new_f); 
 			}
 			});
 		update_names_1();
@@ -283,10 +272,13 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
 	// make all comparisons
+	cout << "starting prefix sort " << n << endl;
 	segs.prefix_sort(0); // Not necessary if already sorted by first character.
+	cout << "updating segments" << endl;
 	segs.update_segments(0);
 	saidx_t offset = 1;
 	while (segs.not_done()) {
+		cout << "offset: " << offset << endl;
 		segs.prefix_sort(offset);
 		segs.update_segments(offset);
 	 	offset *= 2;

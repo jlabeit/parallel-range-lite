@@ -3,7 +3,7 @@ project (Parallel-Ranke-Light)
 add_executable(Parallel-Ranke-Light main.cpp)
 
 #Compiler Flags.
-add_definitions(-Wall -std=c++11 -fcilkplus -lcilkplus -lcilkrts)
+add_definitions(-g -Wall -std=c++11 -fcilkplus -lcilkplus -lcilkrts)
 #add_definitions(-Wall -std=c++11 -DCILKP -fcilkplus -lcilkplus -lcilkrts)
 
 # GTest
