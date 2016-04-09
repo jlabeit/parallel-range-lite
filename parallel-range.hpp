@@ -21,6 +21,7 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <algorithm>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <vector>
@@ -59,7 +60,7 @@ struct cmp_offset {
 };
 
 
-template <class saidx_t, int32_t BLOCK_SIZE = 128*1024>
+template <class saidx_t, int32_t BLOCK_SIZE = 64*1024>
 struct segment_info {
 	// Text size.
 	saidx_t n;
@@ -69,6 +70,10 @@ struct segment_info {
 	vector<bool> bitvector;
 	vector<bool> write_bv;
 	vector<bool> odd_prefix_sum;
+	// Precompute arrays pointing to the next/previous set bit.
+	// Values are stored for all block boundaries.
+	vector<saidx_t> next_one_arr;
+	vector<saidx_t> previous_one_arr;
 
 	segment_info(saidx_t n_, saidx_t* SA_, saidx_t* ISA_) {
 		n = n_;
@@ -81,15 +86,21 @@ struct segment_info {
 		bitvector[n-1] = true;
 		odd_prefix_sum.resize(num_blocks, true);
 		odd_prefix_sum[0] = false;
+		next_one_arr.resize(num_blocks, n-1); next_one_arr[0] = 0;
+		previous_one_arr.resize(num_blocks, 0);
 	}
 
 
 	// Update precomputed structures to answere queries faster.
 	void update_structure() {
 		parallel_for(saidx_t b = 0; b < num_blocks; ++b) {
+			previous_one_arr[b] = -1;
+			next_one_arr[b] = n;
 			saidx_t pos = b * BLOCK_SIZE - 1; // Do not skip first.
 			saidx_t count = 0;
 			while (next_one_in_block(pos, b)) {
+				next_one_arr[b] = min(next_one_arr[b], pos);
+				previous_one_arr[b] = pos;
 				count++;
 			}
 			odd_prefix_sum[b] = count & 1;
@@ -100,49 +111,61 @@ struct segment_info {
 			tmp = sum;
 			sum ^= odd_prefix_sum[b];			
 			odd_prefix_sum[b] = tmp; // exlusive.
+			if (b > 0)
+				previous_one_arr[b] = max(previous_one_arr[b], previous_one_arr[b-1]);
+		}
+		for (saidx_t b = num_blocks-2; b != -1; --b) {
+			next_one_arr[b] = min(next_one_arr[b], next_one_arr[b+1]);
 		}
 	}
 
 	inline bool next_one_in_block(saidx_t& pos, saidx_t block) const {
+		// TODO: Use faster word operations.
 		saidx_t end = std::min((block + 1) * BLOCK_SIZE, n);
 		++pos;
-		while (pos < end) {
-			if (bitvector[pos]) {
-				return true;
-			}
-			++pos;
-		}
-		return false;
+		pos = std::find(bitvector.begin() + pos, bitvector.begin() + end, true) - bitvector.begin();
+		return pos < end;
 	}
 
 	// Find next set bit after pos in block or end in a following block.
 	// Return false if there is no following 1 bit or the the following 1
 	// bit is a start of a segment starting in a new block.
 	inline bool next_one(saidx_t& pos) const {
-		saidx_t end = n; // TODO fast block skip implementation.
 		++pos;
-		while (pos < end) {
-			if (bitvector[pos]) {
-				return true;
-			}
-			++pos;
+		saidx_t b = pos / BLOCK_SIZE;
+		if (pos % BLOCK_SIZE == 0) {
+			pos = next_one_arr[b];
+			return pos < n;
 		}
+		--pos;
+		if (next_one_in_block(pos, b))
+			return true;
+		if (b+1 < num_blocks)
+			pos = next_one_arr[b+1];
+			return pos < n;
 		return false;
 	}
 
 	// Find previous set bit before pos in block or end in a following block.
 	inline void previous_one(saidx_t& pos) const {
-		// TODO fast block skip implementation.
-		while (!bitvector[--pos]) 
-			continue;
+		// Assuming: -	There is always a 1 set before pos.
+		// 	     -	Pos > 0
+		// TODO: Use faster word operations.
+		--pos;
+		// Search reverse in interval [end,start].
+		saidx_t start = pos;
+		saidx_t end = pos / BLOCK_SIZE * BLOCK_SIZE;
+		pos = bitvector.rend() - std::find(bitvector.rbegin() + n - start, bitvector.rbegin() + n - end, true) - 1;
+		if (pos == end) {
+			pos = previous_one_arr[end / BLOCK_SIZE];
+		}
 	}
 
 	// Find first segement start in a block or return false if block is empty.
 	// Note: Pos is only used for output.
 	inline bool find_first_open_in_block(saidx_t& pos, saidx_t block) const {
-		// TODO, maybe do faster precompute.
-		pos = block * BLOCK_SIZE - 1; // -1 to not skip first bit.
-		if (next_one_in_block(pos, block)) {
+		pos = next_one_arr[block];
+		if (pos / BLOCK_SIZE == block && pos < n) {
 			if (odd_prefix_sum[block]) {
 				return next_one_in_block(pos, block); // Skip end of segment.
 			} else {
@@ -169,7 +192,7 @@ struct segment_info {
 				start_segment = end_segment;
 				while (next_one_in_block(start_segment, b)) {
 					end_segment = start_segment;
-					next_one(end_segment);
+					assert(next_one(end_segment));
 					predicate(start_segment, end_segment);
 					start_segment = end_segment;
 				}
@@ -212,8 +235,8 @@ struct segment_info {
 	// Update additional data structure used to navigate segments.
 	// TODO parallelize (use iterate_blocked_segments).
 	void update_segments(saidx_t offset) {
-		parallel_for(saidx_t i = 0; i < n; i++) // TODO do this more efficient.
-			write_bv[i] = false;
+		// TODO do this in-parallel.
+		std::fill(write_bv.begin(), write_bv.end(), false);
 		cmp_offset<saidx_t> F(ISA, n, offset);
 		iterate_segments_blocked([&F, this](saidx_t start, saidx_t end,
 					saidx_t start_segment, saidx_t end_segment) {

@@ -13,6 +13,7 @@ TEST(SegmentInfo, constructor) {
 TEST(SegmentInfo, next_one) {
 	segment_info<int, 5> segs(7, NULL, NULL);
 	segs.bitvector = vector<bool>({1,0,1,0,1,0,1});	
+	segs.update_structure();
 	int pos = 0;
 	EXPECT_EQ(true, segs.next_one(pos));
 	EXPECT_EQ(2, pos);
