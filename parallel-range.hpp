@@ -61,6 +61,116 @@ struct cmp_offset {
 	}
 };
 
+class BV {
+	public:
+	int64_t n;
+	BV(int64_t n_): n(n_) {
+		num_words = (n + 63) / 64;
+		data = new uint64_t[num_words];
+	}	
+	~BV() {
+		delete [] data;
+	}
+
+	void set(int64_t pos) {
+		data[pos / 64] |= 1ULL << (pos % 64);  
+	}
+	void set(int64_t pos, bool value) {
+		if (value)
+			data[pos / 64] |= 1ULL << (pos % 64);  
+		else 
+			data[pos / 64] &= ~(1ULL << (pos % 64));  
+	}
+
+	void print() {
+		for (int i = 0; i < n; i++)
+			cout << is_set(i);
+		cout << endl;
+	}
+	
+	void fill(bool value) {
+		if (value)
+			parallel_for(int64_t i = 0; i < num_words; ++i)
+				data[i] = ~0ULL;
+		else
+			parallel_for(int64_t i = 0; i < num_words; ++i)
+				data[i] = 0ULL;
+	}
+	bool is_set(int64_t pos) const {
+		return (data[pos/64] & (1ULL << (pos % 64))) != 0;
+	}
+
+	uint64_t first_set(int64_t start, int64_t end) const {
+		uint64_t tmp;
+		if ((tmp = __builtin_ffsll(data[start/64] >> (start % 64)))) {
+			// Answer in first block.
+			start += tmp -1;
+			if (start > end)
+				return end;
+			return start;
+		} 
+		start = (start + 63) / 64 * 64; // Round to next word.
+		while (start < end) {
+			if ((tmp = __builtin_ffsll(data[start/64]))) {
+				// Answer in this block.
+				start += tmp -1;
+				if (start > end)
+					return end;
+				return start; 
+			}
+			start += 64;
+		}
+		return end;
+	}
+	uint64_t reverse_first_set(int64_t start, int64_t end) const {
+		uint64_t word;
+		if ((word = data[start/64] << (start % 64))) {
+			start -= __builtin_ctzll(word);
+			if (start < end)
+				return end;
+			return start;
+		}
+		start = (start - 63) / 64 * 64; // Round to next word.
+		while (start > end) {
+			if ((word = data[start / 64])) {
+				start -= __builtin_ctzll(word);
+				if (start < end)
+					return end;
+				return start;
+			}
+			start -= 64;
+		}
+		return end;
+	}
+	bool operator==(const BV& obj) const {
+		if (obj.n != n)
+			return false;
+		for (int64_t i = 0; i < n; i++)
+			if (obj.is_set(i) != is_set(i))
+				return false;
+		return true;
+	}
+	BV(const vector<bool>& obj) : BV(obj.size()) {
+		init(obj);		
+	}
+
+	void init(const vector<bool>& obj) {
+		assert(obj.size() == (uint64_t)n);
+		for (int64_t i = 0; i < n; ++i)
+			set(i, obj[i]);
+	}
+
+	void swap(BV& bv) {
+		std::swap(n, bv.n);
+		std::swap(num_words, bv.num_words);
+		std::swap(data, bv.data);
+	}
+
+	private:
+	int64_t num_words;
+	uint64_t* data;
+};
+
 
 template <class saidx_t, int32_t BLOCK_SIZE = 64*1024>
 struct segment_info {
@@ -69,27 +179,27 @@ struct segment_info {
 	saidx_t* SA;
 	saidx_t* ISA;
 	saidx_t num_blocks;
-	vector<bool> bitvector;
-	vector<bool> write_bv;
-	vector<bool> odd_prefix_sum;
+	BV bitvector;
+	BV write_bv;
+	vector<uint64_t> popcount_sum;
 	// Precompute arrays pointing to the next/previous set bit.
 	// Values are stored for all block boundaries.
 	vector<saidx_t> next_one_arr;
 	vector<saidx_t> previous_one_arr;
 
-	segment_info(saidx_t n_, saidx_t* SA_, saidx_t* ISA_) {
-		n = n_;
+	segment_info(saidx_t n_, saidx_t* SA_, saidx_t* ISA_) : n(n_), bitvector(n), write_bv(n) {
 		SA = SA_;
 		ISA = ISA_;
 		num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
-		bitvector.resize(n, false);
-		write_bv.resize(n);
-		bitvector[0] = true;
-		bitvector[n-1] = true;
-		odd_prefix_sum.resize(num_blocks, true);
-		odd_prefix_sum[0] = false;
+		bitvector.fill(0);
+		bitvector.set(0);
+		bitvector.set(n-1);
 		next_one_arr.resize(num_blocks, n-1); next_one_arr[0] = 0;
 		previous_one_arr.resize(num_blocks, 0);
+		popcount_sum.resize(num_blocks);
+		popcount_sum[0] = 0;
+		parallel_for(saidx_t i = 1; i < num_blocks; ++i) 
+			popcount_sum[i] = 1;
 	}
 
 
@@ -105,14 +215,14 @@ struct segment_info {
 				previous_one_arr[b] = pos;
 				count++;
 			}
-			odd_prefix_sum[b] = count & 1;
+			popcount_sum[b] = count;
 		}
-		bool sum = 0;
-		bool tmp = 0;
+		saidx_t sum = 0;
+		saidx_t tmp = 0;
 		for (saidx_t b = 0; b < num_blocks; ++b) {
 			tmp = sum;
-			sum ^= odd_prefix_sum[b];			
-			odd_prefix_sum[b] = tmp; // exlusive.
+			sum += popcount_sum[b];			
+			popcount_sum[b] = tmp; // exlusive.
 			if (b > 0)
 				previous_one_arr[b] = max(previous_one_arr[b], previous_one_arr[b-1]);
 		}
@@ -125,7 +235,8 @@ struct segment_info {
 		// TODO: Use faster word operations.
 		saidx_t end = std::min((block + 1) * BLOCK_SIZE, n);
 		++pos;
-		pos = std::find(bitvector.begin() + pos, bitvector.begin() + end, true) - bitvector.begin();
+		pos = bitvector.first_set(pos, end);
+		// pos = std::find(bitvector.begin() + pos, bitvector.begin() + end, true) - bitvector.begin();
 		return pos < end;
 	}
 
@@ -157,7 +268,8 @@ struct segment_info {
 		// Search reverse in interval [end,start].
 		saidx_t start = pos;
 		saidx_t end = pos / BLOCK_SIZE * BLOCK_SIZE;
-		pos = bitvector.rend() - std::find(bitvector.rbegin() + n - start, bitvector.rbegin() + n - end, true) - 1;
+		//pos = bitvector.rend() - std::find(bitvector.rbegin() + n - start, bitvector.rbegin() + n - end, true) - 1;
+		pos = bitvector.reverse_first_set(start, end);
 		if (pos == end) {
 			pos = previous_one_arr[end / BLOCK_SIZE];
 		}
@@ -168,7 +280,7 @@ struct segment_info {
 	inline bool find_first_open_in_block(saidx_t& pos, saidx_t block) const {
 		pos = next_one_arr[block];
 		if (pos / BLOCK_SIZE == block && pos < n) {
-			if (odd_prefix_sum[block]) {
+			if (popcount_sum[block] % 2) {
 				return next_one_in_block(pos, block); // Skip end of segment.
 			} else {
 				return true;
@@ -211,7 +323,7 @@ struct segment_info {
 			saidx_t start_segment, end_segment;
 			saidx_t start_block = b * BLOCK_SIZE;
 			saidx_t end_block = std::min((b+1)*BLOCK_SIZE, n) - 1;
-			if (odd_prefix_sum[b]) { // Close segment.
+			if (popcount_sum[b] % 2) { // Close segment.
 				start_segment = start_block;
 				previous_one(start_segment);
 				end_segment = start_block-1;
@@ -237,9 +349,7 @@ struct segment_info {
 	// Update additional data structure used to navigate segments.
 	// TODO parallelize (use iterate_blocked_segments).
 	void update_segments(saidx_t offset) {
-		Timer::start("update");
-		// TODO do this in-parallel.
-		std::fill(write_bv.begin(), write_bv.end(), false);
+		write_bv.fill(false);
 		cmp_offset<saidx_t> F(ISA, n, offset);
 		Timer::start("write");
 		iterate_segments_blocked([&F, this](saidx_t start, saidx_t end,
@@ -252,28 +362,29 @@ struct segment_info {
 			for (saidx_t i = start; i <= end; i++) {
 				old_f = cur_f; cur_f = new_f;
 				new_f = i < end_segment ? F(SA[i+1]) : n;
-				write_bv[i] = (old_f == cur_f) ^ (cur_f == new_f); 
+				if ((old_f == cur_f) ^ (cur_f == new_f))
+					write_bv.set(i);
 			}
 			});
 		Timer::stop("write");
 		Timer::start("name1");
 		update_names_1();
 		Timer::stop("name1");
-		swap(write_bv, bitvector);
+		bitvector.swap(write_bv);
 		Timer::start("update_structure");
 		update_structure();
 		Timer::stop("update_structure");
 		Timer::start("name2");
 		update_names_2();		
 		Timer::stop("name2");
-		Timer::stop("update");
 	}
 
 	// Assign to all suffixes in the current segments their position as ISA value.
 	void update_names_1() {
 		// TODO: Test whats faster blocked or not blocked update.
 		iterate_segments([this](saidx_t start, saidx_t end) {
-				parallel_for (saidx_t i = start; i <= end; ++i) {
+					//saidx_t s, saidx_t e) {
+				for (saidx_t i = start; i <= end; ++i) {
 					ISA[SA[i]] = i;
 				}
 			});
@@ -282,7 +393,8 @@ struct segment_info {
 	void update_names_2() {
 		// TODO: Test whats faster blocked or not blocked update.
 		iterate_segments([this](saidx_t start, saidx_t end) {
-				parallel_for (saidx_t i = start; i <= end; ++i) {
+					//saidx_t s, saidx_t e) {
+				for (saidx_t i = start; i <= end; ++i) {
 					ISA[SA[i]] = start;
 				}
 			});

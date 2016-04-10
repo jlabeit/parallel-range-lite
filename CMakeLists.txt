@@ -4,7 +4,7 @@ add_executable(Parallel-Range-Light main.cpp)
 
 #Compiler Flags.
 target_link_libraries(Parallel-Range-Light divsufsort cilkrts)
-add_definitions(-g -Wall -std=c++11 -DCILKP -fcilkplus)
+add_definitions(-g -O2 -Wall -std=c++11 -fcilkplus -DCILKP)
 #add_definitions(-Wall -std=c++11 -DCILKP -fcilkplus -lcilkplus -lcilkrts)
 
 # GTest
