@@ -122,18 +122,19 @@ class BV {
 		}
 		return end;
 	}
+	// Returns last set bit in interval (end, start].
 	uint64_t reverse_first_set(int64_t start, int64_t end) const {
 		uint64_t word;
-		if ((word = data[start/64] << (start % 64))) {
-			start -= __builtin_ctzll(word);
+		if ((word = data[start/64] << (63 - (start % 64)))) {
+			start -= __builtin_clzll(word);
 			if (start < end)
 				return end;
 			return start;
 		}
-		start = (start - 63) / 64 * 64; // Round to next word.
+		start = start / 64 * 64 - 1; // Round to next word end.
 		while (start > end) {
 			if ((word = data[start / 64])) {
-				start -= __builtin_ctzll(word);
+				start -= __builtin_clzll(word);
 				if (start < end)
 					return end;
 				return start;

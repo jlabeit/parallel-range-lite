@@ -2,6 +2,32 @@
 
 #include "parallel-range.hpp"
 
+TEST(BV, first_set) {
+	BV bv(140);
+	bv.fill(false);
+	bv.set(7);
+	bv.set(99);
+	bv.set(131);
+	EXPECT_EQ(7, bv.first_set(0,140));
+	EXPECT_EQ(7, bv.first_set(7,140));
+	EXPECT_EQ(99, bv.first_set(8,140));
+	EXPECT_EQ(131, bv.first_set(100,140));
+	EXPECT_EQ(99, bv.first_set(61,131));
+	EXPECT_EQ(130, bv.first_set(100,130));
+}
+
+TEST(BV, reverse_first_set) {
+	BV bv(140);
+	bv.fill(false);
+	bv.set(7);
+	bv.set(99);
+	bv.set(131);
+	EXPECT_EQ(131, bv.reverse_first_set(139,-1));
+	EXPECT_EQ(99, bv.reverse_first_set(130,-1));
+	EXPECT_EQ(7, bv.reverse_first_set(98,-1));
+	EXPECT_EQ(-1, bv.reverse_first_set(6,-1));
+}
+
 TEST(SegmentInfo, constructor) {
 	segment_info<int, 5> segs(7, NULL, NULL);
 	EXPECT_EQ(segs.n, 7);	
