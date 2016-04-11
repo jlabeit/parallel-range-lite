@@ -173,7 +173,7 @@ class BV {
 };
 
 
-template <class saidx_t, int32_t BLOCK_SIZE = 64*1024>
+template <class saidx_t, int32_t BLOCK_SIZE = 128*1024>
 struct segment_info {
 	// Text size.
 	saidx_t n;

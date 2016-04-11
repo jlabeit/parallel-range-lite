@@ -26,6 +26,9 @@ TEST(BV, reverse_first_set) {
 	EXPECT_EQ(99, bv.reverse_first_set(130,-1));
 	EXPECT_EQ(7, bv.reverse_first_set(98,-1));
 	EXPECT_EQ(-1, bv.reverse_first_set(6,-1));
+	EXPECT_EQ(99, bv.reverse_first_set(99,8));
+	EXPECT_EQ(8, bv.reverse_first_set(98,8));
+	EXPECT_EQ(7, bv.reverse_first_set(98,7));
 }
 
 TEST(SegmentInfo, constructor) {
