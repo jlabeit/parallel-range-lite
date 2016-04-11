@@ -50,7 +50,8 @@ int main(int argc, char* args[]) {
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
 	for (int i = 0; i < size; i++) {
 		if (ISA[i] != SA[i]) {
-			cout << "SA[i] = " << ISA[i] << " expected but was " << SA[i] << endl;
+			cout << "SA[" << i << "] = " << ISA[i] <<
+				" expected but was " << SA[i] << endl;
 			break;
 		}	
 	}

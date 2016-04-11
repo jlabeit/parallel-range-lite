@@ -25,11 +25,11 @@ class Timer {
 				cout << id << " :" << endl;
 				double sum = 0;
 				for (size_t i = 0; i < vec.size(); i +=2) {
-					auto diff = vec[i+1] - vec[i];
-					cout << diff.count() / 1000000.0<< "ms\n";	
-					sum += diff.count();
+					auto diff = chrono::duration <double, milli>(vec[i+1] - vec[i]).count();
+					cout << diff << "ms\n"; 	
+					sum += diff;
 				}
-				cout << "Sum: " << sum / 1000000.0 << "ms" << endl << endl;
+				cout << "Sum: " << sum << "ms" << endl << endl;
 			}
 		}
 };

@@ -263,12 +263,8 @@ struct segment_info {
 	inline void previous_one(saidx_t& pos) const {
 		// Assuming: -	There is always a 1 set before pos.
 		// 	     -	Pos > 0
-		// TODO: Use faster word operations.
-		--pos;
-		// Search reverse in interval [end,start].
-		saidx_t start = pos;
-		saidx_t end = pos / BLOCK_SIZE * BLOCK_SIZE;
-		//pos = bitvector.rend() - std::find(bitvector.rbegin() + n - start, bitvector.rbegin() + n - end, true) - 1;
+		saidx_t start = pos-1;
+		saidx_t end = pos / BLOCK_SIZE * BLOCK_SIZE-1;
 		pos = bitvector.reverse_first_set(start, end);
 		if (pos == end) {
 			pos = previous_one_arr[end / BLOCK_SIZE];
@@ -301,7 +297,7 @@ struct segment_info {
 			saidx_t start_segment, end_segment;
 			if (find_first_open_in_block(start_segment, b)) {
 				end_segment = start_segment;
-				next_one(end_segment);
+				assert(next_one(end_segment));
 				predicate(start_segment, end_segment);
 				start_segment = end_segment;
 				while (next_one_in_block(start_segment, b)) {
@@ -327,7 +323,7 @@ struct segment_info {
 				start_segment = start_block;
 				previous_one(start_segment);
 				end_segment = start_block-1;
-				next_one(end_segment);
+				assert(next_one(end_segment));
 				predicate(start_block, std::min(end_block, end_segment),
 					       start_segment, end_segment);
 			} else {
@@ -338,7 +334,7 @@ struct segment_info {
 				if (!next_one_in_block(start_segment, b)) 
 					break;
 				end_segment = start_segment;				
-				next_one(end_segment);
+				assert(next_one(end_segment));
 				predicate(start_segment, std::min(end_block, end_segment),
 					       start_segment, end_segment);
 
