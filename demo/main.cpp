@@ -5,7 +5,7 @@
 
 #include <divsufsort.h>
 
-#include "parallel-range.hpp"
+#include <parallel-range.h>
 
 using namespace std;
 
@@ -36,7 +36,7 @@ int main(int argc, char* args[]) {
 		}
 	}
 	auto start = chrono::steady_clock::now();
-	paralleltrsort(ISA, SA, size);
+	parallelrangelight(ISA, SA, size);
 	auto end = chrono::steady_clock::now();
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<

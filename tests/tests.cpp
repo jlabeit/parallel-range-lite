@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "parallel-range.hpp"
+#include <parallel-range.cpp>
 
 TEST(BV, first_set) {
 	BV bv(140);

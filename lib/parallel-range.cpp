@@ -423,3 +423,7 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	}
 	Timer::print();
 }
+
+void parallelrangelight(int* ISA, int* SA, int n) {
+	paralleltrsort(ISA, SA, n);
+}
