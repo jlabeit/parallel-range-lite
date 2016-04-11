@@ -232,7 +232,6 @@ struct segment_info {
 	}
 
 	inline bool next_one_in_block(saidx_t& pos, saidx_t block) const {
-		// TODO: Use faster word operations.
 		saidx_t end = std::min((block + 1) * BLOCK_SIZE, n);
 		++pos;
 		pos = bitvector.first_set(pos, end);
@@ -291,7 +290,6 @@ struct segment_info {
 	}
 
 	// Important: Segments are processed in parallel, even in same block.
-	// TODO skip empty blocks.
 	void iterate_segments(function<void(saidx_t, saidx_t)> predicate) const {
 		parallel_for(saidx_t b = 0; b < num_blocks; b++) {
 			saidx_t start_segment, end_segment;
@@ -343,11 +341,10 @@ struct segment_info {
 	}
 
 	// Update additional data structure used to navigate segments.
-	// TODO parallelize (use iterate_blocked_segments).
 	void update_segments(saidx_t offset) {
 		write_bv.fill(false);
 		cmp_offset<saidx_t> F(ISA, n, offset);
-		Timer::start("write");
+		//Timer::start("write");
 		iterate_segments_blocked([&F, this](saidx_t start, saidx_t end,
 					saidx_t start_segment, saidx_t end_segment) {
 			saidx_t old_f, cur_f, new_f; 
@@ -362,22 +359,21 @@ struct segment_info {
 					write_bv.set(i);
 			}
 			});
-		Timer::stop("write");
-		Timer::start("name1");
+		//Timer::stop("write");
+		//Timer::start("name1");
 		update_names_1();
-		Timer::stop("name1");
+		//Timer::stop("name1");
 		bitvector.swap(write_bv);
-		Timer::start("update_structure");
+		//Timer::start("update_structure");
 		update_structure();
-		Timer::stop("update_structure");
-		Timer::start("name2");
+		//Timer::stop("update_structure");
+		//Timer::start("name2");
 		update_names_2();		
-		Timer::stop("name2");
+		//Timer::stop("name2");
 	}
 
 	// Assign to all suffixes in the current segments their position as ISA value.
 	void update_names_1() {
-		// TODO: Test whats faster blocked or not blocked update.
 		iterate_segments_blocked([this](saidx_t start, saidx_t end,
 					saidx_t s, saidx_t e) {
 				for (saidx_t i = start; i <= end; ++i) {
@@ -387,7 +383,6 @@ struct segment_info {
 	}
 	// Assign all suffixes in the current segments the same ISA value.
 	void update_names_2() {
-		// TODO: Test whats faster blocked or not blocked update.
 		iterate_segments_blocked([this](saidx_t start, saidx_t end,
 					saidx_t s, saidx_t e) {
 				for (saidx_t i = start; i <= end; ++i) {
@@ -397,7 +392,7 @@ struct segment_info {
 	}
 
 	void prefix_sort(saidx_t offset) {
-		Timer::start("sort");
+		//Timer::start("sort");
 		cmp_offset<saidx_t> F(ISA, n, offset); 	
 		iterate_segments([F,offset, this](saidx_t start, saidx_t end) {
 				saidx_t l = end-start+1;
@@ -407,7 +402,7 @@ struct segment_info {
 					quickSort(SA + start, l, F);
 
 				});
-		Timer::stop("sort");
+		//Timer::stop("sort");
 	}
 };
 
