@@ -378,8 +378,8 @@ struct segment_info {
 	// Assign to all suffixes in the current segments their position as ISA value.
 	void update_names_1() {
 		// TODO: Test whats faster blocked or not blocked update.
-		iterate_segments([this](saidx_t start, saidx_t end) {
-					//saidx_t s, saidx_t e) {
+		iterate_segments_blocked([this](saidx_t start, saidx_t end,
+					saidx_t s, saidx_t e) {
 				for (saidx_t i = start; i <= end; ++i) {
 					ISA[SA[i]] = i;
 				}
@@ -388,10 +388,10 @@ struct segment_info {
 	// Assign all suffixes in the current segments the same ISA value.
 	void update_names_2() {
 		// TODO: Test whats faster blocked or not blocked update.
-		iterate_segments([this](saidx_t start, saidx_t end) {
-					//saidx_t s, saidx_t e) {
+		iterate_segments_blocked([this](saidx_t start, saidx_t end,
+					saidx_t s, saidx_t e) {
 				for (saidx_t i = start; i <= end; ++i) {
-					ISA[SA[i]] = start;
+					ISA[SA[i]] = s;
 				}
 			});
 	}
