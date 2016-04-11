@@ -9,6 +9,12 @@
 
 using namespace std;
 
+void printPos(int pos, string& text) {
+	for (int i = 0; i < 10 && i + pos < (int)text.size(); ++i) {
+		cout << text[i+pos];
+	} cout << endl;
+}
+
 int main(int argc, char* args[]) {
 	if (argc != 2) {
 		cout << "Expected two arguments (input and output file)."
@@ -25,6 +31,7 @@ int main(int argc, char* args[]) {
 		text.assign((istreambuf_iterator<char>(input_file)),
 				istreambuf_iterator<char>());
 	}
+	text += '\0';
 	int size = text.size();
 	int *SA,*ISA;
 	{ // Allocate integer buffers.
@@ -52,6 +59,8 @@ int main(int argc, char* args[]) {
 		if (ISA[i] != SA[i]) {
 			cout << "SA[" << i << "] = " << ISA[i] <<
 				" expected but was " << SA[i] << endl;
+			printPos(ISA[i], text);
+			printPos(SA[i], text);
 			break;
 		}	
 	}

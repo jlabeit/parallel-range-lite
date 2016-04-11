@@ -31,6 +31,13 @@ TEST(BV, reverse_first_set) {
 	EXPECT_EQ(7, bv.reverse_first_set(98,7));
 }
 
+TEST(BV, reverse_first_set_2) {
+	BV bv(140);
+	bv.fill(false);
+	bv.set(0);
+	EXPECT_EQ(0, bv.reverse_first_set(98,-1));
+}
+
 TEST(SegmentInfo, constructor) {
 	segment_info<int, 5> segs(7, NULL, NULL);
 	EXPECT_EQ(segs.n, 7);	

@@ -417,6 +417,7 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	segs.update_segments(0);
 	saidx_t offset = 1;
 	while (segs.not_done()) {
+		assert(offset < n);
 		segs.prefix_sort(offset);
 		segs.update_segments(offset);
 	 	offset *= 2;
