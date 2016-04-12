@@ -407,9 +407,9 @@ struct segment_info {
 	}
 };
 
-
 template <class saidx_t>
 void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
+	// TODO: Pack alphabet so that first rounds are more effective.
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
 	// make all comparisons
