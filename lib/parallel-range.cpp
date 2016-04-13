@@ -343,6 +343,7 @@ struct segment_info {
 
 	// Update additional data structure used to navigate segments.
 	void update_segments(saidx_t offset) {
+		Timer::start("update");
 		write_bv.fill(false);
 		cmp_offset<saidx_t> F(ISA, n, offset);
 		//Timer::start("write");
@@ -371,6 +372,7 @@ struct segment_info {
 		//Timer::start("name2");
 		update_names_2();		
 		//Timer::stop("name2");
+		Timer::stop("update");
 	}
 
 	// Assign to all suffixes in the current segments their position as ISA value.
@@ -393,7 +395,7 @@ struct segment_info {
 	}
 
 	void prefix_sort(saidx_t offset) {
-		//Timer::start("sort");
+		Timer::start("sort");
 		cmp_offset<saidx_t> F(ISA, n, offset); 	
 		iterate_segments([F,offset, this](saidx_t start, saidx_t end) {
 				saidx_t l = end-start+1;
@@ -403,7 +405,7 @@ struct segment_info {
 					quickSort(SA + start, l, F);
 
 				});
-		//Timer::stop("sort");
+		Timer::stop("sort");
 	}
 };
 
