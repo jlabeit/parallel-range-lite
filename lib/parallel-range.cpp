@@ -407,9 +407,34 @@ struct segment_info {
 	}
 };
 
+template<class saidx_t>
+saidx_t num_bits(saidx_t c) {
+	int res = 0;
+	while (c != 0) {
+		c >>= 1;
+		res++;
+	}
+	return res;
+}
+
+template<class saidx_t>
+void pack_text(saidx_t* T, saidx_t n) {
+	
+	saidx_t max_character = sequence::reduce<saidx_t>(T, n, utils::maxF<saidx_t>());
+	int bits_per_char = num_bits(max_character);
+	int start_bit = sizeof(saidx_t) * 8 - bits_per_char - 1; // -1 because of signed integers.
+	saidx_t word = 0;
+	for (saidx_t i = n-1; i >= 0; --i) {
+		word >>= bits_per_char;
+		word |= (T[i] << start_bit);
+		T[i] = word;
+	}
+}
+
+
 template <class saidx_t>
 void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
-	// TODO: Pack alphabet so that first rounds are more effective.
+	//pack_text(ISA, n);
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
 	// make all comparisons

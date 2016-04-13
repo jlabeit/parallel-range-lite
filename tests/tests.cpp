@@ -158,15 +158,22 @@ TEST(SegmentInfo, suffix_sort) {
 	EXPECT_EQ(vector<int>({3,2,1,0,4,5,7,6}), SA);
 }
 
-//TEST(ParallelTrSort, simple_integration) {
-//	vector<int> ISA = {0,0,0,0,0,1,0,1};
-//	vector<int> SA = {0,1,2,3,4,5,6,7};
-//	paralleltrsort(ISA.data(), SA.data(), (int)SA.size());
-//	vector<int> expectSA = {0,1,2,3,4,5,6,7};
-//	vector<int> expectISA = {0,1,2,3,4,5,6,7};
-//	EXPECT_EQ(expectSA, SA);
-//	EXPECT_EQ(expectISA, ISA);
-//}
+TEST(PackText, simple) {
+	vector<int> text({1,1,1});
+	pack_text<int>(text.data(), text.size());
+	EXPECT_EQ((1 << 30), text[2]);
+	EXPECT_EQ(((1 << 30) | (1 << 29)), text[1]);
+	EXPECT_EQ(((1 << 30) | (1 << 29) | (1 << 28)), text[0]);
+}
+
+TEST(PackText, different_chars) {
+	vector<int> text({0,3,1});
+	pack_text<int>(text.data(), text.size());
+	EXPECT_EQ((1 << 29), text[2]);
+	EXPECT_EQ(((3 << 29) | (1 << 27)), text[1]);
+	EXPECT_EQ(((3 << 27) | (1 << 25)), text[0]);
+}
+
 
 TEST(ParallelTrSort, error) {
 	// 	   SA: 0123456789
