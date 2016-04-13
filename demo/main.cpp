@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-#include <divsufsort.h>
+//#include <divsufsort.h>
 
 #include <parallel-range.h>
 
@@ -48,6 +48,7 @@ int main(int argc, char* args[]) {
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
+	/*
 	// Time divsufsort.
 	start = chrono::steady_clock::now();
 	divsufsort((unsigned char*)text.data(), ISA, size);
@@ -64,6 +65,7 @@ int main(int argc, char* args[]) {
 			break;
 		}	
 	}
+	*/
 	return 0;
 
 }
