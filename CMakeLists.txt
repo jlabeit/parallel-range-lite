@@ -8,7 +8,6 @@ set(PROJECT_URL "https://github.com/jlabeit/parallel-range-light")
 set(PROJECT_DESCRIPTION "Parallel-range-light: Parallel suffix array algorithm.")
 set(CMAKE_BUILD_TYPE "Release")
 
-add_definitions(-g -O2 -Wall -std=c++11 -fcilkplus -DCILKP)
 append_cxx_compiler_flags("-Wall -std=c++11 -fcilkplus -DCILKP" "GCC" CMAKE_CXX_FLAGS)
 append_cxx_compiler_flags("-O2" "GCC" CMAKE_CXX_OPT_FLAGS)
 
