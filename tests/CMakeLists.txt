@@ -6,4 +6,4 @@ include_directories(${GTEST_INCLUDE_DIRS}
 	)
 
 add_executable(runTests tests.cpp)
-target_link_libraries (runTests libprange divsufsort cilkrts ${GTEST_LIBRARIES} pthread)
+target_link_libraries (runTests libprange cilkrts ${GTEST_LIBRARIES} pthread)
