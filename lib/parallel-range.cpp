@@ -392,7 +392,6 @@ struct segment_info {
 					intSort::iSort(SA + start, l, n , F);
 				else
 					quickSort(SA + start, l, F);
-
 				});
 	}
 };
