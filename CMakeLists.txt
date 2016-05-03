@@ -14,6 +14,8 @@ option (CILK "Use intel implementation of cilkplus for parallization." OFF)
 option (CILKP "Use gcc implementation of cilkplus for parallization." OFF) 
 option (OPENMP "Use OpenMP for parallization for parallization." OFF) 
 
+add_definitions(-g -O2 -Wall -std=c++11 -fcilkplus -DCILKP)
+
 # Check settings.
 if ((CILKP AND OPENMP) OR (CILKP AND CILK) OR (OPENMP AND CILK))
 	message(WARNING "Multiple parallelization techniques are set. This may result in problems.")
