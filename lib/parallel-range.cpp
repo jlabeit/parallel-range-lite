@@ -296,12 +296,12 @@ struct segment_info {
 			saidx_t start_segment, end_segment;
 			if (find_first_open_in_block(start_segment, b)) {
 				end_segment = start_segment;
-				assert(next_one(end_segment));
+				next_one(end_segment);
 				predicate(start_segment, end_segment);
 				start_segment = end_segment;
 				while (next_one_in_block(start_segment, b)) {
 					end_segment = start_segment;
-					assert(next_one(end_segment));
+					next_one(end_segment);
 					predicate(start_segment, end_segment);
 					start_segment = end_segment;
 				}
@@ -322,7 +322,7 @@ struct segment_info {
 				start_segment = start_block;
 				previous_one(start_segment);
 				end_segment = start_block-1;
-				assert(next_one(end_segment));
+				next_one(end_segment);
 				predicate(start_block, std::min(end_block, end_segment),
 					       start_segment, end_segment);
 			} else {
@@ -333,7 +333,7 @@ struct segment_info {
 				if (!next_one_in_block(start_segment, b)) 
 					break;
 				end_segment = start_segment;				
-				assert(next_one(end_segment));
+				next_one(end_segment);
 				predicate(start_segment, std::min(end_block, end_segment),
 					       start_segment, end_segment);
 
