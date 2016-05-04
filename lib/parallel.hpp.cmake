@@ -1,5 +1,11 @@
+
 #ifndef _PARALLEL_H
 #define _PARALLEL_H
+
+// Settings are passed in from CMake.
+#cmakedefine CILK
+#cmakedefine CILKP
+#cmakedefine OPENMP
 
 // cilkarts cilk++
 #if defined(CILK)

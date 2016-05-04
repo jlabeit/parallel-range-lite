@@ -16,7 +16,7 @@ void printPos(int pos, string& text) {
 }
 
 int main(int argc, char* args[]) {
-	if (argc != 2) {
+	if (argc != 3) {
 		cout << "Expected two arguments (input and output file)."
 			<< endl;	
 		return -1;
@@ -48,6 +48,13 @@ int main(int argc, char* args[]) {
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
+	{ // Write output.
+		fstream output_file(args[2], std::ios::out);
+		for (int i = 0; i < size; ++i)
+			output_file << SA[i] << endl;
+		cout << "Output written to " << args[2] << endl;
+		output_file.close();
+	}
 	/*
 	// Time divsufsort.
 	start = chrono::steady_clock::now();
