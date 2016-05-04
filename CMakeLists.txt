@@ -7,7 +7,8 @@ set(PROJECT_VENDOR "Julian Labeit")
 set(PROJECT_CONTACT "julianlabeit@gmail.com")
 set(PROJECT_URL "https://github.com/jlabeit/parallel-range-light")
 set(PROJECT_DESCRIPTION "Parallel-range-light: Parallel suffix array algorithm.")
-#set(CMAKE_BUILD_TYPE "Release")
+
+option (BUILD_TESTS "Build tests as part of the project (GUNIT required)." OFF) 
 
 # Settings about parallization.
 option (CILK "Use intel implementation of cilkplus for parallization." OFF) 
@@ -42,4 +43,6 @@ endif()
 add_subdirectory (include)
 add_subdirectory (lib)
 add_subdirectory (demo)
-add_subdirectory (tests)
+if (BUILD_TESTS)
+	add_subdirectory (tests)
+endif()
