@@ -1,7 +1,7 @@
 Description
 ==========
 
-Parallel-Range-Light is a parallel suffix array construction algorithm for integer alphabets.
+Parallel-Range-Lite is a parallel suffix array construction algorithm for integer alphabets.
 It is a lightweight implementation based on the range algorithm from the Problem Based Benchmark Suite [PBBS](http://www.cs.cmu.edu/~pbbs/).
 A rough description of the algorithm can be found in the following work.
 > Julian Labeit, Julian Shun, and Guy E. Blelloch. Parallel Lightweight Wavelet Tree, Suffix Array and FM-Index Construction. DCC 2015.
@@ -28,9 +28,9 @@ The library provides two basic functions to build the suffix array over a text.
 
 ```c++
 // 32 bit version.
-void parallelrangelight(int32_t* ISA, int32_t* SA, int32_t n);
+void parallelrangelite(int32_t* ISA, int32_t* SA, int32_t n);
 // 64 bit version.
-void parallelrangelight(int64_t* ISA, int64_t* SA, int64_t n);
+void parallelrangelite(int64_t* ISA, int64_t* SA, int64_t n);
 ```
 
 To use the library include the header `parallel-range.h`, link against the library `libprange`.

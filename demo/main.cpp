@@ -43,7 +43,7 @@ int main(int argc, char* args[]) {
 		}
 	}
 	auto start = chrono::steady_clock::now();
-	parallelrangelight(ISA, SA, size);
+	parallelrangelite(ISA, SA, size);
 	auto end = chrono::steady_clock::now();
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<

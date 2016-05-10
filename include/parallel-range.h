@@ -19,5 +19,5 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-void parallelrangelight(int32_t* ISA, int32_t* SA, int32_t n);
-void parallelrangelight(int64_t* ISA, int64_t* SA, int64_t n);
+void parallelrangelite(int32_t* ISA, int32_t* SA, int32_t n);
+void parallelrangelite(int64_t* ISA, int64_t* SA, int64_t n);

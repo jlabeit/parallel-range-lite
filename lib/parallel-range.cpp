@@ -438,9 +438,9 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	}
 }
 
-void parallelrangelight(int32_t* ISA, int32_t* SA, int32_t n) {
+void parallelrangelite(int32_t* ISA, int32_t* SA, int32_t n) {
 	paralleltrsort(ISA, SA, n);
 }
-void parallelrangelight(int64_t* ISA, int64_t* SA, int64_t n) {
+void parallelrangelite(int64_t* ISA, int64_t* SA, int64_t n) {
 	paralleltrsort(ISA, SA, n);
 }
