@@ -9,7 +9,7 @@ A rough description of the algorithm can be found in the following work.
 Installation
 ==========
 The following steps have been tested on Ubuntu 14.04 with gcc 5.3.0 and cmake 2.8.12.
-```
+```shell
 git clone https://github.com/jlabeit/parallel-range-lite.git
 cd parallel-range-lite
 mkdir build
@@ -26,7 +26,7 @@ Getting Started
 An example application can be found in demo/main.cpp.
 The library provides two basic functions to build the suffix array over a text.
 
-```
+```c++
 // 32 bit version.
 void parallelrangelight(int32_t* ISA, int32_t* SA, int32_t n);
 // 64 bit version.
