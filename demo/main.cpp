@@ -3,21 +3,13 @@
 #include <iostream>
 #include <string>
 
-//#include <divsufsort.h>
-
 #include <parallel-range.h>
 
 using namespace std;
 
-void printPos(int pos, string& text) {
-	for (int i = 0; i < 10 && i + pos < (int)text.size(); ++i) {
-		cout << text[i+pos];
-	} cout << endl;
-}
-
 int main(int argc, char* args[]) {
-	if (argc != 3) {
-		cout << "Expected two arguments (input and output file)."
+	if (argc != 2) {
+		cout << "Expected one argument (input file)."
 			<< endl;	
 		return -1;
 	}
@@ -31,15 +23,16 @@ int main(int argc, char* args[]) {
 		text.assign((istreambuf_iterator<char>(input_file)),
 				istreambuf_iterator<char>());
 	}
-	text += '\0';
 	int size = text.size();
-	int *SA,*ISA;
+	int *SA,*ISA,*textInt;
 	{ // Allocate integer buffers.
 		SA = new int[size];		
 		ISA = new int[size];
+		textInt = new int[size];
 		for (int i = 0; i < size; ++i) {
 			SA[i] = i;
-			ISA[i] = text[i];
+			textInt[i] = ISA[i] = ((int)text[i]) + 256; // Cannot be negative.
+			if (ISA[i] < 0) cout << i << endl;
 		}
 	}
 	auto start = chrono::steady_clock::now();
@@ -48,31 +41,10 @@ int main(int argc, char* args[]) {
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
-	{ // Write output.
-		fstream output_file(args[2], std::ios::out);
-		for (int i = 0; i < size; ++i)
-			output_file << SA[i] << endl;
-		cout << "Output written to " << args[2] << endl;
-		output_file.close();
-	}
-	/*
-	// Time divsufsort.
-	start = chrono::steady_clock::now();
-	divsufsort((unsigned char*)text.data(), ISA, size);
-	end = chrono::steady_clock::now();
-	diff = end - start;
-	cout << "DivSufSort time: " <<
-		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
-	for (int i = 0; i < size; i++) {
-		if (ISA[i] != SA[i]) {
-			cout << "SA[" << i << "] = " << ISA[i] <<
-				" expected but was " << SA[i] << endl;
-			printPos(ISA[i], text);
-			printPos(SA[i], text);
-			break;
-		}	
-	}
-	*/
-	return 0;
 
+	if (sufcheck(textInt, SA, size, false)) {
+		cout << "Sufcheck failed!" << endl;
+		return -1;
+	}
+	return 0;
 }

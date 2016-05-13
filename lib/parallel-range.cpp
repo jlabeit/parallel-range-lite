@@ -25,6 +25,7 @@
 #include <functional>
 #include <iostream>
 #include <vector>
+#include <map>
 
 #include "blockRadixSort.hpp"
 #include "parallel.hpp"
@@ -444,3 +445,100 @@ void parallelrangelite(int32_t* ISA, int32_t* SA, int32_t n) {
 void parallelrangelite(int64_t* ISA, int64_t* SA, int64_t n) {
 	paralleltrsort(ISA, SA, n);
 }
+
+template<class saidx_t>
+int sufcheck(const saidx_t *T, const saidx_t *SA,
+         saidx_t n, bool verbose) {
+  std::map<saidx_t, saidx_t> C;
+  saidx_t i, p, q, t;
+  saidx_t c;
+
+  if(verbose) { std::cerr << "sufcheck: "; }
+
+  /* Check arguments. */
+  if((T == NULL) || (SA == NULL) || (n < 0)) {
+    if(verbose) { std::cerr << "Invalid arguments.\n"; }
+    return -1;
+  }
+  if(n == 0) {
+    if(verbose) { std::cerr<< "Done.\n"; }
+    return 0;
+  }
+
+  /* check range: [0..n-1] */
+  for(i = 0; i < n; ++i) {
+    if((SA[i] < 0) || (n <= SA[i])) {
+      if(verbose) {
+	      std::cerr << "Out of the range [0,%" << n-1 << "].\n"
+                        << "  SA[" << i << "]=" << SA[i] << "\n";
+      }
+      return -2;
+    }
+  }
+
+  /* check first characters. */
+  for(i = 1; i < n; ++i) {
+    if(T[SA[i - 1]] > T[SA[i]]) {
+      if(verbose) {
+	      std::cerr <<  "Suffixes in wrong order.\n"
+                        << "  T[SA[" << i-1 <<  "]=" << SA[i-1] << "]=" << T[SA[i-1]]
+                        << " > T[SA[" << i << "]=" << SA[i] << "]=" << T[SA[i]] << "\n";
+      }
+      return -3;
+    }
+  }
+
+  /* check suffixes. */
+  for(i = 0; i < n; ++i) { 
+	  auto it = C.find(T[i]);
+	  if (it == C.end())
+		  C[T[i]] = 1;
+	  else 
+	  	++(it->second);
+  }
+  p = 0;	
+  for (auto & it : C) {
+    t = it.second;
+    it.second = p;
+    p += t;
+  }
+
+  q = C[T[n - 1]];
+  C[T[n - 1]] += 1;
+  for(i = 0; i < n; ++i) {
+    p = SA[i];
+    if(0 < p) {
+      c = T[--p];
+      t = C[c];
+    } else {
+      c = T[p = n - 1];
+      t = q;
+    }
+    if((t < 0) || (p != SA[t])) {
+      if(verbose) {
+	      std::cerr << "Suffix in wrong position.\n"
+                        << "  SA[" << t << "]=" << ((0 <= t) ? SA[t] : -1) << " or\n"
+                        << "  SA[" << i << "]=%" << SA[i] << "\n";
+      }
+      return -4;
+    }
+    if(t != q) {
+      ++C[c];
+      if((n <= C[c]) || (T[SA[C[c]]] != c)) { C[c] = -1; }
+    }
+  }
+
+  if(1 <= verbose) { std::cerr << "Done.\n"; }
+  return 0;
+}
+
+// Template instantiation for linker.
+int sufcheck(const int32_t *T, const int32_t *SA,
+         int32_t n, bool verbose) {
+	return sufcheck<int32_t>(T, SA, n, verbose);
+}
+int sufcheck(const int64_t *T, const int64_t *SA,
+         int64_t n, bool verbose) {
+	return sufcheck<int64_t>(T, SA, n, verbose);
+}
+
