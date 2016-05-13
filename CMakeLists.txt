@@ -8,7 +8,7 @@ set(PROJECT_CONTACT "julianlabeit@gmail.com")
 set(PROJECT_URL "https://github.com/jlabeit/parallel-range-lite")
 set(PROJECT_DESCRIPTION "Parallel-range-lite: Parallel suffix array algorithm.")
 
-option (BUILD_TESTS "Build tests as part of the project (GUNIT required)." OFF) 
+option (BUILD_TESTS "Build tests as part of the project (GUNIT required)." ON) 
 
 # Settings about parallization.
 option (CILK "Use intel implementation of cilkplus for parallization." OFF) 
