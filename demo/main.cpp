@@ -41,7 +41,6 @@ int main(int argc, char* args[]) {
 	auto diff = end - start;
 	cout << "Parallel Range Light time: " <<
 		chrono::duration <double, milli> (diff).count()<< " ms" << endl;
-
 	if (sufcheck(textInt, SA, size, false)) {
 		cout << "Sufcheck failed!" << endl;
 		return -1;
