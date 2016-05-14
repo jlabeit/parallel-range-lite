@@ -389,10 +389,11 @@ struct segment_info {
 		cmp_offset<saidx_t> F(ISA, n, offset); 	
 		iterate_segments([F,offset, this](saidx_t start, saidx_t end) {
 				saidx_t l = end-start+1;
-				if (l >= 256)
-					intSort::iSort(SA + start, l, n , F);
-				else
+				//if (l >= 256)
+					//intSort::iSort(SA + start, l, n , F);
+				//else
 					quickSort(SA + start, l, F);
+				//std::sort(SA+start, SA+start+l, F);
 				});
 	}
 };
@@ -424,7 +425,7 @@ void pack_text(saidx_t* T, saidx_t n) {
 
 template <class saidx_t>
 void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
-	//pack_text(ISA, n);
+	pack_text(ISA, n);
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
 	// make all comparisons
