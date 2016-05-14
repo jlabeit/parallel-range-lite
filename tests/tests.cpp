@@ -187,22 +187,6 @@ TEST(ParallelTrSort, error) {
 	vector<int> expectSA = {9,8,7,5,3,1,0,6,4,2};
 	EXPECT_EQ(expectSA, SA);
 }
-
-TEST(ParallelTrSort, Repetition) {
-	// 	   SA: 999....0
-	string text(1000, 'a'); // = a^1000
-	vector<int> ISA,SA;
-	for (char c : text) {
-		ISA.push_back(c);
-		SA.push_back(SA.size());
-	}
-	paralleltrsort(ISA.data(), SA.data(), (int)SA.size());
-	vector<int> expectSA(1000);
-	for (int i = 0; i < 1000; ++i)
-		expectSA[i] = 999-i;
-	EXPECT_EQ(expectSA, SA);
-}
-
 int main(int argc, char **argv) {
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
