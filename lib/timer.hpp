@@ -34,5 +34,5 @@ class Timer {
 		}
 };
 unordered_map<string,vector<chrono::time_point<chrono::steady_clock>>>
-				Timer::measurements = {};
+				Timer::measurements;
 
