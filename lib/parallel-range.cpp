@@ -174,7 +174,7 @@ class BV {
 };
 
 
-template <class saidx_t, int32_t BLOCK_SIZE = 32*1024>
+template <class saidx_t, int32_t BLOCK_SIZE = 128*1024>
 struct segment_info {
 	// Text size.
 	saidx_t n;
@@ -408,18 +408,38 @@ saidx_t num_bits(saidx_t c) {
 	return res;
 }
 
-template<class saidx_t>
+template<class saidx_t, const saidx_t BLOCK_SIZE=128*1024>
 void pack_text(saidx_t* T, saidx_t n) {
 	
+	saidx_t	num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
+	saidx_t *start_words = new saidx_t[num_blocks];
 	saidx_t max_character = sequence::reduce<saidx_t>(T, n, utils::maxF<saidx_t>());
 	int bits_per_char = num_bits(max_character);
 	int start_bit = sizeof(saidx_t) * 8 - bits_per_char - 1; // -1 because of signed integers.
-	saidx_t word = 0;
-	for (saidx_t i = n-1; i >= 0; --i) {
-		word >>= bits_per_char;
-		word |= (T[i] << start_bit);
-		T[i] = word;
+	// Calculate start words.
+	parallel_for (saidx_t b = 0; b < num_blocks; ++b) {
+		saidx_t end = std::min((b+1)*BLOCK_SIZE, n);
+		saidx_t word = 0;
+		if (end < n)
+			for (saidx_t i = end+(sizeof(saidx_t)*8)/bits_per_char+2;
+					i >= end; i--) {
+				word >>= bits_per_char;
+				word |= (T[i] << start_bit);
+			}
+		start_words[b] = word;
 	}
+	// Actually pack words.
+	parallel_for (saidx_t b = 0; b < num_blocks; ++b) {
+		saidx_t word = start_words[b];
+		saidx_t start = b * BLOCK_SIZE;
+		saidx_t end = std::min((b+1)*BLOCK_SIZE, n);
+		for (saidx_t i = end-1; i >= start; --i) {
+			word >>= bits_per_char;
+			word |= (T[i] << start_bit);
+			T[i] = word;
+		}
+	}
+	delete [] start_words;
 }
 
 
