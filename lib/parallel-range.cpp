@@ -456,7 +456,6 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	saidx_t offset = pack_text(ISA, n);
 	saidx_t max_char = sequence::reduce<saidx_t>(ISA, n, utils::maxF<saidx_t>());
 	intSort::iSort(SA, n, max_char+1, sequence::getA<saidx_t, saidx_t>(ISA));
-	cout << "Offset:" << offset << endl;
 
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
