@@ -8,7 +8,7 @@ set(PROJECT_CONTACT "julianlabeit@gmail.com")
 set(PROJECT_URL "https://github.com/jlabeit/parallel-range-lite")
 set(PROJECT_DESCRIPTION "Parallel-range-lite: Parallel suffix array algorithm.")
 
-option (BUILD_TESTS "Build tests as part of the project (GUNIT required)." OFF) 
+option (BUILD_TESTS "Build tests as part of the project (GUNIT required)." ON) 
 
 # Settings about parallization.
 option (CILK "Use intel implementation of cilkplus for parallization." OFF) 
@@ -35,7 +35,7 @@ if( CMAKE_COMPILER_IS_GNUCXX )
 		message( SEND_ERROR "Intel CilkPlus setting is not supported by GCC.")
 	endif (CILK)
 	append_cxx_compiler_flags("-static-libstdc++ -std=c++11 -Wall -Wextra  -DNDEBUG" "GCC" CMAKE_CXX_FLAGS)
-	append_cxx_compiler_flags("-O2 -ffast-math -funroll-loops" "GCC" CMAKE_CXX_FLAGS)
+	append_cxx_compiler_flags("-O3 -ffast-math -funroll-loops" "GCC" CMAKE_CXX_FLAGS)
 else()
 	message(SEND_ERROR "Using unknown cxx compiler.")
 endif()
