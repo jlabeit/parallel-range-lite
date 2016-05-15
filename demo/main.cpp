@@ -7,6 +7,7 @@
 
 using namespace std;
 
+typedef uint32_t uint;
 int main(int argc, char* args[]) {
 	if (argc != 2) {
 		cout << "Expected one argument (input file)."
@@ -23,16 +24,15 @@ int main(int argc, char* args[]) {
 		text.assign((istreambuf_iterator<char>(input_file)),
 				istreambuf_iterator<char>());
 	}
-	int size = text.size();
-	int *SA,*ISA,*textInt;
+	uint size = text.size();
+	uint *SA,*ISA,*textInt;
 	{ // Allocate integer buffers.
-		SA = new int[size];		
-		ISA = new int[size];
-		textInt = new int[size];
+		SA = new uint[size];
+		ISA = new uint[size];
+		textInt = new uint[size];
 		for (int i = 0; i < size; ++i) {
 			SA[i] = i;
-			textInt[i] = ISA[i] = ((int)text[i]) + 256; // Cannot be negative.
-			if (ISA[i] < 0) cout << i << endl;
+			textInt[i] = ISA[i] = (uint)(text[i]+128); // Cannot be negative.
 		}
 	}
 	auto start = chrono::steady_clock::now();

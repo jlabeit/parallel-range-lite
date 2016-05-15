@@ -4,8 +4,7 @@
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
-// without limitation the rights (to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to
+// without limitation the rights (to use, copy, modify, merge, publish, // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
 //
@@ -52,10 +51,10 @@ template <class saidx_t>
 struct cmp_offset {
 	saidx_t *ISA;
 	saidx_t n,offset;
-	cmp_offset(saidx_t* ISA_, saidx_t n_, saidx_t offset_ ) : ISA(ISA_), n(n_), offset(offset_) {}
+	cmp_offset(saidx_t* ISA_, saidx_t n_, saidx_t offset_ ) : ISA(ISA_), n(n_), offset(offset_) { }
 	// Return rank of the suffix offset characters after the suffix at position pos
 	saidx_t operator() (const saidx_t& pos)const {
-		return (pos + offset >= n) ? (n-pos-offset) : ISA[pos+offset]; 
+		return ((pos + offset >= n) ? 0 : (1 + ISA[pos+offset])); 
 	}
 	bool operator()(const saidx_t& a, const saidx_t& b)const {
 		return (*this)(a) < (*this)(b);
@@ -174,20 +173,20 @@ class BV {
 };
 
 
-template <class saidx_t, int32_t BLOCK_SIZE = 128*1024>
+template <class saidx_t, int32_t BLOCK_SIZE = 32*1024>
 struct segment_info {
 	// Text size.
 	saidx_t n;
 	saidx_t* SA;
 	saidx_t* ISA;
-	saidx_t num_blocks;
+	int32_t num_blocks;
 	BV bitvector;
 	BV write_bv;
 	vector<uint64_t> popcount_sum;
 	// Precompute arrays pointing to the next/previous set bit.
 	// Values are stored for all block boundaries.
-	vector<saidx_t> next_one_arr;
-	vector<saidx_t> previous_one_arr;
+	vector<int64_t> next_one_arr;
+	vector<int64_t> previous_one_arr;
 
 	segment_info(saidx_t n_, saidx_t* SA_, saidx_t* ISA_) : n(n_), bitvector(n), write_bv(n) {
 		SA = SA_;
@@ -200,18 +199,18 @@ struct segment_info {
 		previous_one_arr.resize(num_blocks, 0);
 		popcount_sum.resize(num_blocks);
 		popcount_sum[0] = 0;
-		parallel_for(saidx_t i = 1; i < num_blocks; ++i) 
+		parallel_for(int64_t i = 1; i < num_blocks; ++i) 
 			popcount_sum[i] = 1;
 	}
 
 
 	// Update precomputed structures to answere queries faster.
 	void update_structure() {
-		parallel_for(saidx_t b = 0; b < num_blocks; ++b) {
+		parallel_for(int64_t b = 0; b < num_blocks; ++b) {
 			previous_one_arr[b] = -1;
 			next_one_arr[b] = n;
-			saidx_t pos = b * BLOCK_SIZE - 1; // Do not skip first.
-			saidx_t count = 0;
+			int64_t pos = ((int64_t)b * BLOCK_SIZE) - 1; // Do not skip first.
+			int64_t count = 0;
 			while (next_one_in_block(pos, b)) {
 				next_one_arr[b] = min(next_one_arr[b], pos);
 				previous_one_arr[b] = pos;
@@ -219,22 +218,22 @@ struct segment_info {
 			}
 			popcount_sum[b] = count;
 		}
-		saidx_t sum = 0;
-		saidx_t tmp = 0;
-		for (saidx_t b = 0; b < num_blocks; ++b) {
+		int64_t sum = 0;
+		int64_t tmp = 0;
+		for (int64_t b = 0; b < num_blocks; ++b) {
 			tmp = sum;
 			sum += popcount_sum[b];			
 			popcount_sum[b] = tmp; // exlusive.
 			if (b > 0)
 				previous_one_arr[b] = max(previous_one_arr[b], previous_one_arr[b-1]);
 		}
-		for (saidx_t b = num_blocks-2; b != -1; --b) {
+		for (int64_t b = num_blocks-2; b >= 0; --b) {
 			next_one_arr[b] = min(next_one_arr[b], next_one_arr[b+1]);
 		}
 	}
 
-	inline bool next_one_in_block(saidx_t& pos, saidx_t block) const {
-		saidx_t end = std::min((block + 1) * BLOCK_SIZE, n);
+	inline bool next_one_in_block(int64_t& pos, int64_t block) const {
+		int64_t end = std::min((block + 1) * BLOCK_SIZE, (int64_t)n);
 		++pos;
 		pos = bitvector.first_set(pos, end);
 		// pos = std::find(bitvector.begin() + pos, bitvector.begin() + end, true) - bitvector.begin();
@@ -244,39 +243,39 @@ struct segment_info {
 	// Find next set bit after pos in block or end in a following block.
 	// Return false if there is no following 1 bit or the the following 1
 	// bit is a start of a segment starting in a new block.
-	inline bool next_one(saidx_t& pos) const {
+	inline bool next_one(int64_t& pos) const {
 		++pos;
-		saidx_t b = pos / BLOCK_SIZE;
+		int64_t b = pos / BLOCK_SIZE;
 		if (pos % BLOCK_SIZE == 0) {
 			pos = next_one_arr[b];
-			return pos < n;
+			return (saidx_t)pos < n;
 		}
 		--pos;
 		if (next_one_in_block(pos, b))
 			return true;
 		if (b+1 < num_blocks)
 			pos = next_one_arr[b+1];
-			return pos < n;
+			return (saidx_t)pos < n;
 		return false;
 	}
 
 	// Find previous set bit before pos in block or end in a following block.
-	inline void previous_one(saidx_t& pos) const {
+	inline void previous_one(int64_t& pos) const {
 		// Assuming: -	There is always a 1 set before pos.
 		// 	     -	Pos > 0
 		saidx_t start = pos-1;
 		saidx_t end = pos / BLOCK_SIZE * BLOCK_SIZE-1;
 		pos = bitvector.reverse_first_set(start, end);
-		if (pos == end) {
+		if ((saidx_t)pos == end) {
 			pos = previous_one_arr[end / BLOCK_SIZE];
 		}
 	}
 
 	// Find first segement start in a block or return false if block is empty.
 	// Note: Pos is only used for output.
-	inline bool find_first_open_in_block(saidx_t& pos, saidx_t block) const {
+	inline bool find_first_open_in_block(int64_t& pos, int64_t block) const {
 		pos = next_one_arr[block];
-		if (pos / BLOCK_SIZE == block && pos < n) {
+		if (pos / BLOCK_SIZE == block && (saidx_t)pos < n) {
 			if (popcount_sum[block] % 2) {
 				return next_one_in_block(pos, block); // Skip end of segment.
 			} else {
@@ -287,14 +286,14 @@ struct segment_info {
 	}
 
 	inline bool not_done() {
-		saidx_t tmp = -1;
+		int64_t tmp = -1;
 		return next_one(tmp);
 	}
 
 	// Important: Segments are processed in parallel, even in same block.
 	void iterate_segments(function<void(saidx_t, saidx_t)> predicate) const {
-		parallel_for(saidx_t b = 0; b < num_blocks; b++) {
-			saidx_t start_segment, end_segment;
+		parallel_for(int64_t b = 0; b < num_blocks; b++) {
+			int64_t start_segment, end_segment;
 			if (find_first_open_in_block(start_segment, b)) {
 				end_segment = start_segment;
 				next_one(end_segment);
@@ -315,10 +314,10 @@ struct segment_info {
 	// of the same block.
 	void iterate_segments_blocked(std::function<void(saidx_t, saidx_t, saidx_t, saidx_t)>
 			predicate) const {
-		parallel_for(saidx_t b = 0; b < num_blocks; b++) {
-			saidx_t start_segment, end_segment;
-			saidx_t start_block = b * BLOCK_SIZE;
-			saidx_t end_block = std::min((b+1)*BLOCK_SIZE, n) - 1;
+		parallel_for(int64_t b = 0; b < num_blocks; b++) {
+			int64_t start_segment, end_segment;
+			int64_t start_block = b * BLOCK_SIZE;
+			int64_t end_block = std::min((b+1)*BLOCK_SIZE, (int64_t)n) - 1;
 			if (popcount_sum[b] % 2) { // Close segment.
 				start_segment = start_block;
 				previous_one(start_segment);
@@ -351,11 +350,11 @@ struct segment_info {
 			saidx_t old_f, cur_f, new_f; 
 			// old_f and new_f can only compare as equal if they
 			// are in the segment bounds.
-			cur_f = start_segment < start ? F(SA[start-1]) : n;
+			cur_f = start_segment < start ? F(SA[start-1]) : 2*n;
 			new_f = F(SA[start]);
 			for (saidx_t i = start; i <= end; i++) {
 				old_f = cur_f; cur_f = new_f;
-				new_f = i < end_segment ? F(SA[i+1]) : n;
+				new_f = i < end_segment ? F(SA[i+1]) : 2*n;
 				if ((old_f == cur_f) ^ (cur_f == new_f))
 					write_bv.set(i);
 			}
@@ -385,15 +384,22 @@ struct segment_info {
 			});
 	}
 
+	saidx_t getMaxF(saidx_t* arr, const saidx_t size,
+			const cmp_offset<saidx_t>& F) const {
+		return sequence::reduce<saidx_t, saidx_t> (0, size,
+				utils::maxF<saidx_t>(),
+				sequence::getAF<saidx_t, saidx_t, saidx_t,
+				cmp_offset<saidx_t>>(arr, F)) + 1;
+	}
+
 	void prefix_sort(saidx_t offset) {
 		cmp_offset<saidx_t> F(ISA, n, offset); 	
 		iterate_segments([F,offset, this](saidx_t start, saidx_t end) {
 				saidx_t l = end-start+1;
-				//if (l >= 256)
-					//intSort::iSort(SA + start, l, n , F);
-				//else
+				if (l >= 256) {
+					intSort::iSort(SA + start, l, n+1, F);
+				} else
 					quickSort(SA + start, l, F);
-				//std::sort(SA+start, SA+start+l, F);
 				});
 	}
 };
@@ -409,19 +415,19 @@ saidx_t num_bits(saidx_t c) {
 }
 
 template<class saidx_t, const saidx_t BLOCK_SIZE=128*1024>
-void pack_text(saidx_t* T, saidx_t n) {
+saidx_t pack_text(saidx_t* T, saidx_t n) {
 	
 	saidx_t	num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
 	saidx_t *start_words = new saidx_t[num_blocks];
-	saidx_t max_character = sequence::reduce<saidx_t>(T, n, utils::maxF<saidx_t>());
-	int bits_per_char = num_bits(max_character);
-	int start_bit = sizeof(saidx_t) * 8 - bits_per_char - 1; // -1 because of signed integers.
+	saidx_t max_char = sequence::reduce<saidx_t>(T, n, utils::maxF<saidx_t>());
+	int bits_per_char = num_bits(max_char);
+	int start_bit = sizeof(saidx_t) * 8 - bits_per_char;
 	// Calculate start words.
 	parallel_for (saidx_t b = 0; b < num_blocks; ++b) {
 		saidx_t end = std::min((b+1)*BLOCK_SIZE, n);
 		saidx_t word = 0;
 		if (end < n)
-			for (saidx_t i = end+(sizeof(saidx_t)*8)/bits_per_char+2;
+			for (int64_t i = end+(sizeof(saidx_t)*8)/bits_per_char+2;
 					i >= end; i--) {
 				word >>= bits_per_char;
 				word |= (T[i] << start_bit);
@@ -433,25 +439,28 @@ void pack_text(saidx_t* T, saidx_t n) {
 		saidx_t word = start_words[b];
 		saidx_t start = b * BLOCK_SIZE;
 		saidx_t end = std::min((b+1)*BLOCK_SIZE, n);
-		for (saidx_t i = end-1; i >= start; --i) {
+		for (int64_t i = end-1; i >= start; --i) {
 			word >>= bits_per_char;
 			word |= (T[i] << start_bit);
 			T[i] = word;
 		}
 	}
 	delete [] start_words;
+	return (sizeof(saidx_t)*8) / bits_per_char;
 }
 
 
 template <class saidx_t>
 void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
-	pack_text(ISA, n);
+	// Initial packing and sorting.
+	saidx_t offset = pack_text(ISA, n);
+	saidx_t max_char = sequence::reduce<saidx_t>(ISA, n, utils::maxF<saidx_t>());
+	intSort::iSort(SA, n, max_char+1, sequence::getA<saidx_t, saidx_t>(ISA));
+	cout << "Offset:" << offset << endl;
+
 	// segments = [0,n]
 	segment_info<saidx_t> segs(n, SA, ISA);
-	// make all comparisons
-	segs.prefix_sort(0); // Not necessary if already sorted by first character.
 	segs.update_segments(0);
-	saidx_t offset = 1;
 	while (segs.not_done()) {
 		assert(offset < n);
 		segs.prefix_sort(offset);
@@ -460,10 +469,10 @@ void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
 	}
 }
 
-void parallelrangelite(int32_t* ISA, int32_t* SA, int32_t n) {
+void parallelrangelite(uint32_t* ISA, uint32_t* SA, uint32_t n) {
 	paralleltrsort(ISA, SA, n);
 }
-void parallelrangelite(int64_t* ISA, int64_t* SA, int64_t n) {
+void parallelrangelite(uint64_t* ISA, uint64_t* SA, uint64_t n) {
 	paralleltrsort(ISA, SA, n);
 }
 
@@ -554,12 +563,12 @@ int sufcheck(const saidx_t *T, const saidx_t *SA,
 }
 
 // Template instantiation for linker.
-int sufcheck(const int32_t *T, const int32_t *SA,
-         int32_t n, bool verbose) {
-	return sufcheck<int32_t>(T, SA, n, verbose);
+int sufcheck(const uint32_t *T, const uint32_t *SA,
+         uint32_t n, bool verbose) {
+	return sufcheck<uint32_t>(T, SA, n, verbose);
 }
-int sufcheck(const int64_t *T, const int64_t *SA,
-         int64_t n, bool verbose) {
-	return sufcheck<int64_t>(T, SA, n, verbose);
+int sufcheck(const uint64_t *T, const uint64_t *SA,
+         uint32_t n, bool verbose) {
+	return sufcheck<uint64_t>(T, SA, n, verbose);
 }
 

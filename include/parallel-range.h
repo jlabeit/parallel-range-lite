@@ -19,11 +19,11 @@
 // LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-void parallelrangelite(int32_t* ISA, int32_t* SA, int32_t n);
-void parallelrangelite(int64_t* ISA, int64_t* SA, int64_t n);
+void parallelrangelite(uint32_t* ISA, uint32_t* SA, uint32_t n);
+void parallelrangelite(uint64_t* ISA, uint64_t* SA, uint64_t n);
 
-int sufcheck(const int32_t *T, const int32_t *SA,
-		int32_t n, bool verbose); 
-int sufcheck(const int64_t *T, const int64_t *SA,
-		int64_t n, bool verbose);
+int sufcheck(const uint32_t *T, const uint32_t *SA,
+		uint32_t n, bool verbose); 
+int sufcheck(const uint64_t *T, const uint64_t *SA,
+		uint64_t n, bool verbose);
 

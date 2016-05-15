@@ -2,6 +2,10 @@
 
 #include <parallel-range.cpp>
 
+typedef uint uint;
+
+
+
 TEST(BV, first_set) {
 	BV bv(140);
 	bv.fill(false);
@@ -39,7 +43,7 @@ TEST(BV, reverse_first_set_2) {
 }
 
 TEST(SegmentInfo, constructor) {
-	segment_info<int, 5> segs(7, NULL, NULL);
+	segment_info<uint, 5> segs(7, NULL, NULL);
 	EXPECT_EQ(segs.n, 7);	
 	EXPECT_EQ(segs.num_blocks, 2);	
 	BV expected(vector<bool>({1,0,0,0,0,0,1}));
@@ -48,10 +52,10 @@ TEST(SegmentInfo, constructor) {
 }
 
 TEST(SegmentInfo, next_one) {
-	segment_info<int, 5> segs(7, NULL, NULL);
+	segment_info<uint, 5> segs(7, NULL, NULL);
 	segs.bitvector.init(vector<bool>({1,0,1,0,1,0,1}));	
 	segs.update_structure();
-	int pos = 0;
+	int64_t pos = 0;
 	EXPECT_EQ(true, segs.next_one(pos));
 	EXPECT_EQ(2, pos);
 	EXPECT_EQ(true, segs.next_one(pos));
@@ -62,7 +66,7 @@ TEST(SegmentInfo, next_one) {
 }
 
 TEST(SegmentInfo, update_structure) {
-	segment_info<int, 5> segs(9, NULL, NULL);
+	segment_info<uint, 5> segs(9, NULL, NULL);
 	segs.bitvector.init(vector<bool>({0,1,1,1,0,0,0,1,0}));
 	segs.update_structure();
 	EXPECT_EQ(vector<uint64_t>({0,3}), segs.popcount_sum);
@@ -72,10 +76,10 @@ TEST(SegmentInfo, update_structure) {
 }
 
 TEST(SegmentInfo, find_first_open) {
-	segment_info<int, 5> segs(9, NULL, NULL);
+	segment_info<uint, 5> segs(9, NULL, NULL);
 	segs.bitvector.init(vector<bool>({0,1,1,1,0,0,0,1,0}));	
 	segs.update_structure();
-	int pos = -42; // Should not matter.
+	int64_t pos = -42; // Should not matter.
 	EXPECT_EQ(true, segs.find_first_open_in_block(pos, 0));
 	EXPECT_EQ(1, pos);
 	// Last block only contains end not start!.
@@ -84,121 +88,121 @@ TEST(SegmentInfo, find_first_open) {
 
 
 TEST(SegmentInfo, iterate_segments) {
-	segment_info<int, 5> segs(9, NULL, NULL);
+	segment_info<uint, 5> segs(9, NULL, NULL);
 	segs.bitvector.init(vector<bool>({1,1,0,1,0,0,0,1,0}));	
 	segs.update_structure();
-	vector<vector<int>> result;
-	segs.iterate_segments([&result](int s, int e) { result.push_back({s,e});});
-	EXPECT_EQ( vector<vector<int>>({{0,1},{3,7}}), result);
+	vector<vector<uint>> result;
+	segs.iterate_segments([&result](uint s, uint e) { result.push_back({s,e});});
+	EXPECT_EQ( vector<vector<uint>>({{0,1},{3,7}}), result);
 }
 
 TEST(SegmentInfo, iterate_segments_blocked) {
-	segment_info<int, 5> segs(9, NULL, NULL);
+	segment_info<uint, 5> segs(9, NULL, NULL);
 	segs.bitvector.init(vector<bool>({1,1,0,1,0,0,0,1,0}));
 	segs.update_structure();
-	vector<vector<int>> result;
-	segs.iterate_segments_blocked([&result](int s, int e, int gs, int ge) {
+	vector<vector<uint>> result;
+	segs.iterate_segments_blocked([&result](uint s, uint e, uint gs, uint ge) {
 			result.push_back({s,e, gs, ge});
 			});
-	EXPECT_EQ( vector<vector<int>>({{0,1,0,1},{3,4,3,7}, {5,7,3,7}}), result);
+	EXPECT_EQ( vector<vector<uint>>({{0,1,0,1},{3,4,3,7}, {5,7,3,7}}), result);
 }
 
 TEST(SegmentInfo, iterate_segments_blocked_without_update) {
-	segment_info<int, 5> segs(10, NULL, NULL);
+	segment_info<uint, 5> segs(10, NULL, NULL);
 	segs.bitvector.init(vector<bool>({1,0,0,0,0,0,0,0,0,1}));
-	vector<vector<int>> result;
-	segs.iterate_segments_blocked([&result](int s, int e, int gs, int ge) {
+	vector<vector<uint>> result;
+	segs.iterate_segments_blocked([&result](uint s, uint e, uint gs, uint ge) {
 			result.push_back({s,e, gs, ge});
 			});
-	EXPECT_EQ( vector<vector<int>>({{0,4,0,9},{5,9,0,9}}), result);
+	EXPECT_EQ( vector<vector<uint>>({{0,4,0,9},{5,9,0,9}}), result);
 }
 
 TEST(SegmentInfo, update_segments) {
-	vector<int> ISA = {0,0,0,0,4,5,5,5};
-	vector<int> SA = {0,1,2,3,4,5,6,7};
-	segment_info<int, 5> segs(8, SA.data(), ISA.data());
+	vector<uint> ISA = {0,0,0,0,4,5,5,5};
+	vector<uint> SA = {0,1,2,3,4,5,6,7};
+	segment_info<uint, 5> segs(8, SA.data(), ISA.data());
 	segs.update_segments(0);
 	EXPECT_EQ(BV(vector<bool>({1,0,0,1,0,1,0,1})), segs.bitvector);
 	EXPECT_EQ(4, segs.ISA[4]);
 }
 
 TEST(SegmentInfo, update_names_1) {
-	vector<int> ISA = {0,0,0,0,0,0,6,7};
-	vector<int> SA = {0,1,2,3,4,5,6,7};
-	segment_info<int, 5> segs(8, SA.data(), ISA.data());
+	vector<uint> ISA = {0,0,0,0,0,0,6,7};
+	vector<uint> SA = {0,1,2,3,4,5,6,7};
+	segment_info<uint, 5> segs(8, SA.data(), ISA.data());
 	segs.bitvector.init(vector<bool>({0,1,0,1,1,1,0,0}));
 	segs.update_structure();
 	segs.update_names_1();
-	vector<int> result({0,1,2,3,4,5,6,7});
+	vector<uint> result({0,1,2,3,4,5,6,7});
 	for (size_t i = 0; i < result.size(); ++i) {
 		EXPECT_EQ(result[i], segs.ISA[i]);	
 	}
 }
 
 TEST(SegmentInfo, update_names_2) {
-	vector<int> ISA = {0,0,0,0,0,0,6,7};
-	vector<int> SA = {0,1,2,3,4,5,6,7};
-	segment_info<int, 5> segs(8, SA.data(), ISA.data());
+	vector<uint> ISA = {0,0,0,0,0,0,6,7};
+	vector<uint> SA = {0,1,2,3,4,5,6,7};
+	segment_info<uint, 5> segs(8, SA.data(), ISA.data());
 	segs.bitvector.init(vector<bool>({0,1,0,1,1,1,0,0}));
 	segs.update_structure();
 	segs.update_names_2();
-	vector<int> result({0,1,1,1,4,4,6,7});
+	vector<uint> result({0,1,1,1,4,4,6,7});
 	for (size_t i = 0; i < result.size(); ++i) {
 		EXPECT_EQ(result[i], segs.ISA[i]);	
 	}
 }
 
 TEST(SegmentInfo, suffix_sort) {
-	vector<int> ISA = {3,2,1,0,0,0,7,6};
-	vector<int> SA = {0,1,2,3,4,5,6,7};
-	segment_info<int, 5> segs(8, SA.data(), ISA.data());
+	vector<uint> ISA = {3,2,1,0,0,0,7,6};
+	vector<uint> SA = {0,1,2,3,4,5,6,7};
+	segment_info<uint, 5> segs(8, SA.data(), ISA.data());
 	segs.bitvector.init(vector<bool>({1,0,0,1,0,0,1,1}));
 	segs.update_structure();
 	segs.prefix_sort(0);
-	EXPECT_EQ(vector<int>({3,2,1,0,4,5,7,6}), SA);
+	EXPECT_EQ(vector<uint>({3,2,1,0,4,5,7,6}), SA);
 }
 
 TEST(PackText, simple) {
-	vector<int> text({1,1,1});
-	pack_text<int>(text.data(), text.size());
-	EXPECT_EQ((1 << 30), text[2]);
-	EXPECT_EQ(((1 << 30) | (1 << 29)), text[1]);
-	EXPECT_EQ(((1 << 30) | (1 << 29) | (1 << 28)), text[0]);
+	vector<uint> text({1,1,1});
+	pack_text<uint>(text.data(), text.size());
+	EXPECT_EQ((1 << 31), text[2]);
+	EXPECT_EQ(((1 << 31) | (1 << 30)), text[1]);
+	EXPECT_EQ(((1 << 31) | (1 << 30) | (1 << 29)), text[0]);
 }
 
 TEST(PackText, different_chars) {
-	vector<int> text({0,3,1});
-	pack_text<int>(text.data(), text.size());
-	EXPECT_EQ((1 << 29), text[2]);
-	EXPECT_EQ(((3 << 29) | (1 << 27)), text[1]);
-	EXPECT_EQ(((3 << 27) | (1 << 25)), text[0]);
+	vector<uint> text({0,3,1});
+	pack_text<uint>(text.data(), text.size());
+	EXPECT_EQ((1 << 30), text[2]);
+	EXPECT_EQ(((3 << 30) | (1 << 28)), text[1]);
+	EXPECT_EQ(((3 << 28) | (1 << 26)), text[0]);
 }
 
 
 TEST(ParallelTrSort, error) {
 	// 	   SA: 0123456789
 	string text = "banananaaa";
-	vector<int> ISA,SA;
+	vector<uint> ISA,SA;
 	for (char c : text) {
 		ISA.push_back(c);
 		SA.push_back(SA.size());
 	}
-	paralleltrsort(ISA.data(), SA.data(), (int)SA.size());
-	vector<int> expectSA = {9,8,7,5,3,1,0,6,4,2};
+	paralleltrsort(ISA.data(), SA.data(), (uint)SA.size());
+	vector<uint> expectSA = {9,8,7,5,3,1,0,6,4,2};
 	EXPECT_EQ(expectSA, SA);
 }
 
 TEST(ParallelTrSort, Repetition) {
 	// 	   SA: 999....0
 	string text(1000, 'a'); // = a^1000
-	vector<int> ISA,SA;
+	vector<uint> ISA,SA;
 	for (char c : text) {
 		ISA.push_back(c);
 		SA.push_back(SA.size());
 	}
-	paralleltrsort(ISA.data(), SA.data(), (int)SA.size());
-	vector<int> expectSA(1000);
-	for (int i = 0; i < 1000; ++i)
+	paralleltrsort(ISA.data(), SA.data(), (uint)SA.size());
+	vector<uint> expectSA(1000);
+	for (uint i = 0; i < 1000; ++i)
 		expectSA[i] = 999-i;
 	EXPECT_EQ(expectSA, SA);
 }

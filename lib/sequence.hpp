@@ -46,12 +46,12 @@ _seq(T* _A, long _n) : A(_A), n(_n) {}
   void del() {free(A);}
 };
 
-template <class E>
+template <class E, class intT>
 void brokenCompiler__(intT n, E* x, E v) {
   parallel_for(intT i=0; i<n; i++) x[i] = v;
 }
 
-template <class E>
+template <class E, class intT>
 static E* newArray(intT n, E v) {
   E* x = (E*) malloc(n*sizeof(E));
   brokenCompiler__(n, x, v);

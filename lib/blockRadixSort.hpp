@@ -57,7 +57,7 @@ namespace intSort {
       s += counts[i];
       offsets[i] = s;
     }
-    for (intT j = n-1; j >= 0; j--) {
+    for (intT j = n-1; j != (intT)-1; j--) { // intT can be an unsigned integer!
       intT x =  --offsets[Tmp[j]];
       B[x] = A[j];
     }
@@ -121,7 +121,7 @@ namespace intSort {
   }
 
   // a function to extract "bits" bits starting at bit location "offset"
-  template <class E, class F>
+  template <class E, class F, class intT>
     struct eBits {
       intT _mask;  intT _offset; F _f;  
       eBits(int bits, intT offset, F f): _mask((1<<bits)-1), 
@@ -139,7 +139,7 @@ namespace intSort {
       while (bitOffset < bits) {
 	if (bitOffset+rbits > bits) rbits = bits-bitOffset;
 	radixStep(A, B, Tmp, BK, numBK, n, (intT)1 << rbits, top,
-		  eBits<E,F>(rbits,bitOffset,f));
+		  eBits<E,F, intT>(rbits,bitOffset,f));
 	bitOffset += rbits;
       }
   }
@@ -150,10 +150,10 @@ namespace intSort {
 			intT numBK, intT n, int bits, F f) {
     if (n == 0) return;
     if (bits <= MAX_RADIX) {
-      radixStep(A, B, Tmp, BK, numBK, n, (intT)1 << bits, true, eBits<E,F>(bits,0,f));
+      radixStep(A, B, Tmp, BK, numBK, n, (intT)1 << bits, true, eBits<E,F,intT>(bits,0,f));
     } else if (numBK >= BUCKETS+1) {
       radixStep(A, B, Tmp, BK, numBK, n, (intT)BUCKETS, true,
-		eBits<E,F>(MAX_RADIX,bits-MAX_RADIX,f));
+		eBits<E,F,intT>(MAX_RADIX,bits-MAX_RADIX,f));
       intT* offsets = BK[0];
       intT remain = numBK - BUCKETS - 1;
       float y = remain / (float) n;
@@ -203,7 +203,7 @@ namespace intSort {
     intT tmpSize = sizeof(bIndexT)*n;
     bucketsT *BK = (bucketsT*) (tmpSpace+Bsize+tmpSize);
     if (bits <= MAX_RADIX) {
-      radixStep(A, B, Tmp, BK, numBK, n, (intT) 1 << bits, true, eBits<E,F>(bits,0,f));
+      radixStep(A, B, Tmp, BK, numBK, n, (intT) 1 << bits, true, eBits<E,F,intT>(bits,0,f));
       if (bucketOffsets != NULL) {
 	parallel_for (intT i=0; i < m; i++) 
 	  bucketOffsets[i] = BK[0][i];
@@ -228,7 +228,7 @@ namespace intSort {
 
   template <class E, class F, class intT>
   void iSort(E *A, intT* bucketOffsets, intT n, intT m, bool bottomUp, F f) {
-    long x = iSortSpace<E,intT>(n);
+    int64_t x = iSortSpace<E,intT>(n);
     char* s = (char*) malloc(x);
     iSort(A, bucketOffsets, n, m, bottomUp, s, f);
     free(s);
@@ -248,33 +248,16 @@ namespace intSort {
     iSort(A, (intT*) NULL, n, m, true, f);}
 };
 
-typedef unsigned int uint;
-
 template <class intT>
-static void integerSort(uintT *A, intT n) {
-  intT maxV = sequence::reduce(A,n,utils::maxF<uintT>());
-  intSort::iSort(A, (intT*) NULL, n, maxV+1,  utils::identityF<uintT>());
+static void integerSort(intT *A, intT n) {
+  intT maxV = sequence::reduce(A,n,utils::maxF<intT>());
+  intSort::iSort(A, (intT*) NULL, n, maxV+1,  utils::identityF<intT>());
 }
 
 template <class intT>
-static void integerSort(uintT *A, intT n, char* s) {
-  intT maxV = sequence::reduce(A,n,utils::maxF<uintT>());
-  intSort::iSort(A, (intT*) NULL, n, maxV+1, false, s, utils::identityF<uintT>());
+static void integerSort(intT *A, intT n, char* s) {
+  intT maxV = sequence::reduce(A,n,utils::maxF<intT>());
+  intSort::iSort(A, (intT*) NULL, n, maxV+1, false, s, utils::identityF<intT>());
 }
-
-template <class T, class intT>
-void integerSort(pair<uintT,T> *A, intT n) {
-  intT maxV = sequence::mapReduce<uintT>(A,n,utils::maxF<uintT>(),
-					utils::firstF<uintT,T>());
-  intSort::iSort(A, (intT*) NULL, n, maxV+1,  utils::firstF<uintT,T>());
-}
-
-template <class T, class intT>
-void integerSort(pair<uintT,T> *A, intT n, char* s) {
-  intT maxV = sequence::mapReduce<uintT>(A,n,utils::maxF<uintT>(),
-					utils::firstF<uintT,T>());
-  intSort::iSort(A, (intT*) NULL, n, maxV+1, false, s, utils::firstF<uintT,T>());
-}
-
 #endif
 

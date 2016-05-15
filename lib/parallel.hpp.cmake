@@ -73,18 +73,4 @@ static void setWorkers(int n) { }
 
 #endif
 
-#include <limits.h>
-
-//#if defined(LONG)
-typedef long intT;
-typedef unsigned long uintT;
-#define INT_T_MAX LONG_MAX
-#define UINT_T_MAX ULONG_MAX
-//#else
-//typedef int intT;
-//typedef unsigned int uintT;
-//#define INT_T_MAX INT_MAX
-//#define UINT_T_MAX UINT_MAX
-//#endif
-
 #endif // _PARALLEL_H
