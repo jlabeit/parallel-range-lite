@@ -48,7 +48,7 @@ TEST(SegmentInfo, constructor) {
 	EXPECT_EQ(segs.num_blocks, 2);	
 	BV expected(vector<bool>({1,0,0,0,0,0,1}));
 	EXPECT_EQ(segs.bitvector, expected);	
-	EXPECT_EQ(segs.popcount_sum, vector<uint64_t>({0,1}));
+	EXPECT_EQ(segs.popcount_sum, vector<int64_t>({0,1}));
 }
 
 TEST(SegmentInfo, next_one) {
@@ -69,10 +69,10 @@ TEST(SegmentInfo, update_structure) {
 	segment_info<uint, 5> segs(9, NULL, NULL);
 	segs.bitvector.init(vector<bool>({0,1,1,1,0,0,0,1,0}));
 	segs.update_structure();
-	EXPECT_EQ(vector<uint64_t>({0,3}), segs.popcount_sum);
+	EXPECT_EQ(vector<int64_t>({0,3}), segs.popcount_sum);
 	segs.bitvector.init(vector<bool>({0,1,1,0,0,0,0,0,0}));
 	segs.update_structure();
-	EXPECT_EQ(segs.popcount_sum, vector<uint64_t>({0,2}));
+	EXPECT_EQ(segs.popcount_sum, vector<int64_t>({0,2}));
 }
 
 TEST(SegmentInfo, find_first_open) {

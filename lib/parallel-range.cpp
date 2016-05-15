@@ -101,6 +101,8 @@ class BV {
 	}
 
 	uint64_t first_set(int64_t start, int64_t end) const {
+		if (start >= end)
+			return end;
 		uint64_t tmp;
 		if ((tmp = __builtin_ffsll(data[start/64] >> (start % 64)))) {
 			// Answer in first block.
@@ -179,10 +181,10 @@ struct segment_info {
 	saidx_t n;
 	saidx_t* SA;
 	saidx_t* ISA;
-	int32_t num_blocks;
+	int64_t num_blocks;
 	BV bitvector;
 	BV write_bv;
-	vector<uint64_t> popcount_sum;
+	vector<int64_t> popcount_sum;
 	// Precompute arrays pointing to the next/previous set bit.
 	// Values are stored for all block boundaries.
 	vector<int64_t> next_one_arr;
@@ -567,7 +569,7 @@ int sufcheck(const uint32_t *T, const uint32_t *SA,
 	return sufcheck<uint32_t>(T, SA, n, verbose);
 }
 int sufcheck(const uint64_t *T, const uint64_t *SA,
-         uint32_t n, bool verbose) {
+         uint64_t n, bool verbose) {
 	return sufcheck<uint64_t>(T, SA, n, verbose);
 }
 
