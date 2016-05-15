@@ -424,8 +424,8 @@ saidx_t pack_text(saidx_t* T, saidx_t n) {
 	int start_bit = sizeof(saidx_t) * 8 - bits_per_char;
 	// Calculate start words.
 	parallel_for (saidx_t b = 0; b < num_blocks; ++b) {
-		saidx_t end = std::min((b+1)*BLOCK_SIZE, n);
-		saidx_t word = 0;
+		int64_t end = std::min((b+1)*BLOCK_SIZE, n);
+		uint64_t word = 0;
 		if (end < n)
 			for (int64_t i = end+(sizeof(saidx_t)*8)/bits_per_char+2;
 					i >= end; i--) {
@@ -436,9 +436,9 @@ saidx_t pack_text(saidx_t* T, saidx_t n) {
 	}
 	// Actually pack words.
 	parallel_for (saidx_t b = 0; b < num_blocks; ++b) {
-		saidx_t word = start_words[b];
-		saidx_t start = b * BLOCK_SIZE;
-		saidx_t end = std::min((b+1)*BLOCK_SIZE, n);
+		uint64_t word = start_words[b];
+		int64_t start = b * BLOCK_SIZE;
+		int64_t end = std::min((b+1)*BLOCK_SIZE, n);
 		for (int64_t i = end-1; i >= start; --i) {
 			word >>= bits_per_char;
 			word |= (T[i] << start_bit);

@@ -192,6 +192,19 @@ TEST(ParallelTrSort, error) {
 	EXPECT_EQ(expectSA, SA);
 }
 
+TEST(ParallelTrSort, 64bit) {
+	// 	   SA: 0123456789
+	string text = "banananaaa";
+	vector<uint64_t> ISA,SA;
+	for (char c : text) {
+		ISA.push_back(c);
+		SA.push_back(SA.size());
+	}
+	paralleltrsort(ISA.data(), SA.data(), (uint64_t)SA.size());
+	vector<uint64_t> expectSA = {9,8,7,5,3,1,0,6,4,2};
+	EXPECT_EQ(expectSA, SA);
+}
+
 TEST(ParallelTrSort, Repetition) {
 	// 	   SA: 999....0
 	string text(1000, 'a'); // = a^1000
