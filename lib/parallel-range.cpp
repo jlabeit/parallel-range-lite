@@ -1,7 +1,5 @@
 // This code is part of the Problem Based Benchmark Suite (PBBS)
-// Copyright (c) 2011 Guy Blelloch and the PBBS team
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
+// Copyright (c) 2011 Guy Blelloch and the PBBS team // // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the
 // "Software"), to deal in the Software without restriction, including
 // without limitation the rights (to use, copy, modify, merge, publish, // distribute, sublicense, and/or sell copies of the Software, and to
@@ -454,6 +452,7 @@ saidx_t pack_text(saidx_t* T, saidx_t n) {
 
 template <class saidx_t>
 void paralleltrsort(saidx_t* ISA, saidx_t* SA, saidx_t n) {
+    if (n < 2) return;
 	// Initial packing and sorting.
 	saidx_t offset = pack_text(ISA, n);
 	saidx_t max_char = sequence::reduce<saidx_t>(ISA, n, utils::maxF<saidx_t>());
