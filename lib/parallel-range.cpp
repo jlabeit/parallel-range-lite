@@ -420,7 +420,7 @@ saidx_t pack_text(saidx_t* T, saidx_t n) {
 	saidx_t	num_blocks = (n + BLOCK_SIZE - 1) / BLOCK_SIZE;
 	saidx_t *start_words = new saidx_t[num_blocks];
 	saidx_t max_char = sequence::reduce<saidx_t>(T, n, utils::maxF<saidx_t>());
-	int bits_per_char = num_bits(max_char);
+	int bits_per_char = std::max((saidx_t)1, num_bits(max_char));
 	int start_bit = sizeof(saidx_t) * 8 - bits_per_char;
 	// Calculate start words.
 	parallel_for (saidx_t b = 0; b < num_blocks; ++b) {
